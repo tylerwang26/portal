@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>小i 🦊 行動門戶</title>
+<style>
+:root{
+--bg:#0b0f14;
+--card:#161c24;
+--border:rgba(255,255,255,.06);
+--text:#e8edf2;
+--muted:#91a0ad;
+--accent:#00e5ff;
+--good:#54d62c;
+--bad:#ff4842;
+--warn:#ffb020;
+--chip:rgba(145,158,171,.18);
+--shadow:0 10px 30px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+body{
+margin:0; padding:16px;
+background:var(--bg); color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans TC","PingFang TC",sans-serif;
+-webkit-font-smoothing:antialiased;
+}
+.topbar{
+display:flex; align-items:center; justify-content:space-between;
+gap:12px; margin-bottom:14px;
+}
+.brand{
+font-weight:800; letter-spacing:.3px;
+display:flex; align-items:center; gap:10px;
+}
+.brand .dot{
+width:10px;height:10px;border-radius:50%;
+background:var(--accent);
+box-shadow:0 0 18px rgba(0,229,255,.65);
+}
+.badge{
+font-size:12px; font-weight:700;
+padding:6px 10px; border-radius:999px;
+background:rgba(84,214,44,.12);
+color:var(--good);
+border:1px solid rgba(84,214,44,.25);
+white-space:nowrap;
+}
+.sub{
+color:var(--muted);
+font-size:12px;
+margin:0 0 14px 0;
+line-height:1.4;
+}
+
+.grid{
+display:grid;
+grid-template-columns:1fr;
+gap:12px;
+}
+@media (min-width: 760px){
+.grid{ grid-template-columns:1fr 1fr; }
+}
+
+.card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:16px;
+padding:14px;
+box-shadow:var(--shadow);
+}
+.card h2{
+margin:0 0 10px 0;
+font-size:13px;
+color:var(--muted);
+text-transform:uppercase;
+letter-spacing:1px;
+display:flex; align-items:center; justify-content:space-between;
+gap:10px;
+}
+.pill{
+background:var(--chip);
+color:var(--muted);
+border:1px solid rgba(255,255,255,.06);
+border-radius:999px;
+padding:3px 8px;
+font-size:11px;
+font-weight:700;
+text-transform:none;
+letter-spacing:0;
+white-space:nowrap;
+}
+
+.row{
+display:flex; align-items:center; justify-content:space-between;
+gap:10px;
+padding:10px 0;
+border-bottom:1px solid rgba(255,255,255,.04);
+}
+.row:last-child{border-bottom:none}
+.sym{
+font-weight:800; font-size:16px;
+display:flex; align-items:baseline; gap:8px;
+}
+.name{
+font-weight:600;
+font-size:12px;
+color:var(--muted);
+}
+.tag{
+font-size:12px; font-weight:900;
+padding:4px 10px; border-radius:8px;
+border:1px solid transparent;
+white-space:nowrap;
+}
+.entry{ background:rgba(84,214,44,.12); color:var(--good); border-color:rgba(84,214,44,.25); }
+.exit{ background:rgba(255,72,66,.12); color:var(--bad); border-color:rgba(255,72,66,.25); }
+.hold{ background:rgba(0,229,255,.10); color:var(--accent); border-color:rgba(0,229,255,.22); }
+.wait{ background:rgba(255,176,32,.10); color:var(--warn); border-color:rgba(255,176,32,.22); }
+
+.wide{ grid-column:1/-1; }
+.note{
+margin:0;
+color:var(--muted);
+font-size:13px;
+line-height:1.6;
+}
+.links{
+display:flex;
+flex-direction:column;
+gap:10px;
+margin-top:10px;
+}
+a.btn{
+display:block;
+text-decoration:none;
+color:#001014;
+background:var(--accent);
+border-radius:12px;
+padding:12px 12px;
+text-align:center;
+font-weight:900;
+}
+a.ghost{
+background:transparent;
+color:var(--accent);
+border:1px solid rgba(0,229,255,.25);
+}
+.footer{
+margin-top:16px;
+color:var(--muted);
+font-size:12px;
+text-align:center;
+padding:10px 0 18px;
+}
+code{
+background:rgba(255,255,255,.06);
+border:1px solid rgba(255,255,255,.08);
+padding:2px 6px;
+border-radius:8px;
+color:var(--text);
+font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+font-size:12px;
+}
+</style>
+</head>
+
+<body>
+<div class="topbar">
+<div class="brand"><span class="dot"></span>小i 行動門戶</div>
+<div class="badge">LIVE</div>
+</div>
+<p class="sub">
+這是「純展示 / 永遠可開」版本：不依賴 Gateway Token、不會跳到 Control UI。<br/>
+若要管理系統請另外開 Control UI（需授權）。
+</p>
+
+<div class="grid">
+<div class="card">
+<h2>迅狐戰術（競賽）<span class="pill">10MA / 高頻</span></h2>
+
+<div class="row">
+<div>
+<div class="sym">TSLA <span class="name">Tesla</span></div>
+</div>
+<div class="tag entry">ENTRY</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">NVDA <span class="name">Nvidia</span></div>
+</div>
+<div class="tag exit">EXIT</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">GOLD <span class="name">Gold Futures</span></div>
+</div>
+<div class="tag exit">EXIT</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">TX <span class="name">台指期</span></div>
+</div>
+<div class="tag wait">NO SIGNAL</div>
+</div>
+</div>
+
+<div class="card">
+<h2>靈狐策略 V5（長期）<span class="pill">Rule 5 / 20MA</span></h2>
+
+<div class="row">
+<div>
+<div class="sym">2330 <span class="name">台積電</span></div>
+</div>
+<div class="tag hold">HOLD</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">6274 <span class="name">台燿</span></div>
+</div>
+<div class="tag hold">HOLD</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">0050 <span class="name">元大台灣50</span></div>
+</div>
+<div class="tag hold">HOLD</div>
+</div>
+
+<div class="row">
+<div>
+<div class="sym">2603 <span class="name">長榮</span></div>
+</div>
+<div class="tag wait">WAIT</div>
+</div>
+</div>
+
+<div class="card wide">
+<h2>使用方式（最穩路徑）<span class="pill">建議加到主畫面</span></h2>
+<p class="note">
+1) 這個 Portal 只負責「看訊號/看摘要」，不做任何需要授權的操作。<br/>
+2) 避免 Telegram Mini App 走錯路由：請直接用瀏覽器開 <code>https://portal.twai.zeabur.app</code>。<br/>
+3) 如果要進 OpenClaw 控制台，請用另一個網域（例如 <code>twai.zeabur.app</code>）並完成授權。
+</p>
+
+<div class="links">
+<a class="btn ghost" href="https://twai.zeabur.app" target="_blank" rel="noreferrer">前往 OpenClaw Control UI（需授權）</a>
+</div>
+</div>
+</div>
+
+<div class="footer">
+v1.0 (Portal / Node) • Last Update: <span id="ts"></span>
+</div>
+
+<script>
+// 顯示本地時間（避免你以為頁面沒更新）
+document.getElementById("ts").innerText = new Date().toLocaleString("zh-TW", { hour12:false });
+</script>
+</body>
+</html>
