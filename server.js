@@ -119,8 +119,9 @@ app.get('/api/workspace/view', requireTelegramUser, (req, res) => {
     }
 });
 
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Catch-all route (Express 5 compatible)
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
