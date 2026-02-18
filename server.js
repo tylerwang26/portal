@@ -10,7 +10,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Block access to sensitive files
+app.use((req, res, next) => {
+    const blocked = ['/server.js', '/package.json', '/package-lock.json', '/.env', '/.gitignore', '/README.md'];
+    const blockedPrefixes = ['/node_modules', '/.git'];
+    
+    if (blocked.includes(req.path) || blockedPrefixes.some(prefix => req.path.startsWith(prefix))) {
+        return res.status(404).send('Not Found');
+    }
+    next();
+});
+
+app.use(express.static(__dirname));
 
 // Telegram WebApp security
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -126,7 +137,7 @@ app.get('/api/workspace/view', requireTelegramUser, (req, res) => {
 
 // Catch-all route (Express 5 compatible)
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
