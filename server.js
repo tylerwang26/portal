@@ -12,8 +12,10 @@ const PORT = process.env.PORT || 3000;
 
 // Block access to sensitive files
 app.use((req, res, next) => {
-    const blocked = ['/server.js', '/package.json', '/package-lock.json', '/.env', '/.gitignore'];
-    if (blocked.some(path => req.path === path) || req.path.startsWith('/node_modules')) {
+    const blocked = ['/server.js', '/package.json', '/package-lock.json', '/.env', '/.gitignore', '/README.md'];
+    const blockedPrefixes = ['/node_modules', '/.git'];
+    
+    if (blocked.includes(req.path) || blockedPrefixes.some(prefix => req.path.startsWith(prefix))) {
         return res.status(404).send('Not Found');
     }
     next();
