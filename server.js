@@ -10,6 +10,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Block access to sensitive files
+app.use((req, res, next) => {
+    const blocked = ['/server.js', '/package.json', '/package-lock.json', '/.env', '/.gitignore'];
+    if (blocked.some(path => req.path === path) || req.path.startsWith('/node_modules')) {
+        return res.status(404).send('Not Found');
+    }
+    next();
+});
+
 app.use(express.static(__dirname));
 
 // Telegram WebApp security
