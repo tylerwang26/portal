@@ -1,3 +1,9 @@
+const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+const TG_INITDATA = TG ? TG.initData : '';
+function apiFetch(url) {
+  return fetch(url, { headers: TG_INITDATA ? { 'X-TG-INITDATA': TG_INITDATA } : {} });
+}
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -251,7 +257,7 @@
         async function fetchSignals() {
             try {
                 const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await fetch('/api/signals', {
+                const response = await apiFetch('/api/signals', {
                     headers: initData ? { 'X-TG-INITDATA': initData } : {}
                 });
                 const data = await response.json();
@@ -283,7 +289,7 @@
             
             try {
                 const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await fetch(`/api/workspace/list?path=${encodeURIComponent(path)}`,
+                const response = await apiFetch(`\/api/workspace/list?path=${encodeURIComponent(path)}`,
                     { headers: initData ? { 'X-TG-INITDATA': initData } : {} }
                 );
                 const data = await response.json();
@@ -328,7 +334,7 @@
             
             try {
                 const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await fetch(`/api/workspace/view?path=${encodeURIComponent(path)}`,
+                const response = await apiFetch(`\/api/workspace/view?path=${encodeURIComponent(path)}`,
                     { headers: initData ? { 'X-TG-INITDATA': initData } : {} }
                 );
                 const data = await response.json();
