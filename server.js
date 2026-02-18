@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 // Telegram WebApp security
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -126,7 +126,7 @@ app.get('/api/workspace/view', requireTelegramUser, (req, res) => {
 
 // Catch-all route (Express 5 compatible)
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
