@@ -1,6 +1,6 @@
 {
-  "last_update": "2026-02-19T11:00:08.790Z",
-  "updatedAt": "2026-02-19T11:00:08.790Z",
+  "last_update": "2026-02-19T11:56:55.127Z",
+  "updatedAt": "2026-02-19T11:56:55.127Z",
   "competition": [],
   "longterm": [
     {
@@ -40,7 +40,7 @@
       "name": "Tesla",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.17%",
       "sparkline": []
     },
     {
@@ -48,7 +48,7 @@
       "name": "Microsoft",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.69%",
       "sparkline": []
     },
     {
@@ -56,7 +56,7 @@
       "name": "Apple",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.18%",
       "sparkline": []
     },
     {
@@ -64,7 +64,7 @@
       "name": "Alphabet",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.43%",
       "sparkline": []
     },
     {
@@ -72,7 +72,7 @@
       "name": "Netflix",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.24%",
       "sparkline": []
     },
     {
@@ -80,7 +80,7 @@
       "name": "Nvidia",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.63%",
       "sparkline": []
     },
     {
@@ -88,23 +88,23 @@
       "name": "3X Semiconductor",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "3.01%",
       "sparkline": []
     },
     {
       "symbol": "NQ=F",
       "name": "那斯達克",
-      "action": "KEEP",
-      "type": "buy",
-      "change": "N/A",
+      "action": "HOLD",
+      "type": "sell",
+      "change": "-0.37%",
       "sparkline": []
     },
     {
       "symbol": "GC=F",
       "name": "黃金",
-      "action": "KEEP",
-      "type": "buy",
-      "change": "N/A",
+      "action": "HOLD",
+      "type": "sell",
+      "change": "-0.12%",
       "sparkline": []
     },
     {
@@ -112,7 +112,7 @@
       "name": "加權指數",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.61%",
       "sparkline": []
     }
   ],
@@ -136,9 +136,9 @@
     {
       "symbol": "3017",
       "name": "奇鋐",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-0.93%",
       "sparkline": []
     },
     {
@@ -162,15 +162,15 @@
       "name": "Abbott Laboratories",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.92%",
       "sparkline": []
     },
     {
       "symbol": "CVS",
       "name": "CVS Health",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-0.58%",
       "sparkline": []
     },
     {
@@ -178,31 +178,31 @@
       "name": "Chevron",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.84%",
       "sparkline": []
     },
     {
       "symbol": "DUK",
       "name": "Duke Energy",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-1.16%",
       "sparkline": []
     },
     {
       "symbol": "EL",
       "name": "Estée Lauder",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-0.48%",
       "sparkline": []
     },
     {
       "symbol": "GILD",
       "name": "Gilead Sciences",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-1.63%",
       "sparkline": []
     },
     {
@@ -210,15 +210,15 @@
       "name": "Medtronic",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "2.16%",
       "sparkline": []
     },
     {
       "symbol": "SO",
       "name": "Southern Company",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-1.04%",
       "sparkline": []
     },
     {
@@ -226,7 +226,7 @@
       "name": "Exxon Mobil",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "3.07%",
       "sparkline": []
     },
     {
@@ -234,7 +234,7 @@
       "name": "Vanguard S&P 500 ETF",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.50%",
       "sparkline": []
     },
     {
@@ -242,7 +242,7 @@
       "name": "QuinStreet",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "2.96%",
       "sparkline": []
     },
     {
@@ -250,23 +250,23 @@
       "name": "DuPont",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.94%",
       "sparkline": []
     },
     {
       "symbol": "INTC",
       "name": "Intel",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-1.56%",
       "sparkline": []
     },
     {
       "symbol": "TLT",
       "name": "iShares 20+ Year Treasury Bond ETF",
-      "action": "HOT",
-      "type": "buy",
-      "change": "N/A",
+      "action": "COOL",
+      "type": "wait",
+      "change": "-0.38%",
       "sparkline": []
     },
     {
@@ -274,7 +274,7 @@
       "name": "Micron Technology",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "5.30%",
       "sparkline": []
     },
     {
@@ -282,7 +282,7 @@
       "name": "Johnson & Johnson",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.68%",
       "sparkline": []
     },
     {
@@ -290,7 +290,7 @@
       "name": "JPMorgan Chase",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.54%",
       "sparkline": []
     },
     {
@@ -298,7 +298,7 @@
       "name": "Bank of America",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.18%",
       "sparkline": []
     },
     {
@@ -306,7 +306,7 @@
       "name": "Capital One Financial",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.52%",
       "sparkline": []
     },
     {
@@ -314,7 +314,7 @@
       "name": "Warner Bros. Discovery",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.14%",
       "sparkline": []
     },
     {
@@ -322,7 +322,7 @@
       "name": "FedEx",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "2.07%",
       "sparkline": []
     },
     {
@@ -330,7 +330,7 @@
       "name": "Fox Corp Class A",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "1.31%",
       "sparkline": []
     },
     {
@@ -338,7 +338,7 @@
       "name": "Merck & Co.",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A",
+      "change": "0.07%",
       "sparkline": []
     }
   ],
