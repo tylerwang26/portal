@@ -1,0 +1,47 @@
+{
+  "last_update": "2026-02-19T07:49:45.972Z",
+  "updatedAt": "2026-02-19T07:49:45.972Z",
+  "competition": [],
+  "longterm": [
+    {
+      "symbol": "2330",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "1.86%"
+    },
+    {
+      "symbol": "2317",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "2.71%"
+    },
+    {
+      "symbol": "0050",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "2.25%"
+    },
+    {
+      "symbol": "^TWII",
+      "action": "N/A",
+      "type": "wait"
+    },
+    {
+      "symbol": "NQ=F",
+      "action": "N/A",
+      "type": "wait"
+    },
+    {
+      "symbol": "GC=F",
+      "action": "N/A",
+      "type": "wait"
+    },
+    {
+      "symbol": "NVDA",
+      "action": "N/A",
+      "type": "wait"
+    }
+  ],
+  "status": "Online",
+  "message": "市場平穩監控中"
+}
