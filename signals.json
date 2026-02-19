@@ -1,20 +1,8 @@
 {
-  "last_update": "2026-02-19T08:02:25.213Z",
-  "updatedAt": "2026-02-19T08:02:25.214Z",
+  "last_update": "2026-02-19T09:36:03.788Z",
+  "updatedAt": "2026-02-19T09:36:03.788Z",
   "competition": [],
   "longterm": [
-    {
-      "symbol": "2330",
-      "action": "KEEP",
-      "type": "buy",
-      "change": "1.86%"
-    },
-    {
-      "symbol": "2317",
-      "action": "KEEP",
-      "type": "buy",
-      "change": "2.71%"
-    },
     {
       "symbol": "0050",
       "action": "KEEP",
@@ -22,24 +10,252 @@
       "change": "2.25%"
     },
     {
-      "symbol": "^TWII",
-      "action": "N/A",
-      "type": "wait"
+      "symbol": "006208",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "2.20%"
     },
     {
-      "symbol": "NQ=F",
-      "action": "N/A",
-      "type": "wait"
+      "symbol": "2330",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "1.86%"
     },
     {
-      "symbol": "GC=F",
-      "action": "N/A",
-      "type": "wait"
+      "symbol": "6274",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "0.00%"
+    },
+    {
+      "symbol": "TSLA",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "MSFT",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "AAPL",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "GOOGL",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "NFLX",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
     },
     {
       "symbol": "NVDA",
-      "action": "N/A",
-      "type": "wait"
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "SOXL",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "NQ=F",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "GC=F",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "^TWII",
+      "action": "KEEP",
+      "type": "buy",
+      "change": "N/A"
+    }
+  ],
+  "watchlist": [
+    {
+      "symbol": "2317",
+      "action": "HOT",
+      "type": "buy",
+      "change": "2.71%"
+    },
+    {
+      "symbol": "2454",
+      "action": "HOT",
+      "type": "buy",
+      "change": "0.54%"
+    },
+    {
+      "symbol": "3017",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "2603",
+      "action": "HOT",
+      "type": "buy",
+      "change": "0.00%"
+    },
+    {
+      "symbol": "2881",
+      "action": "HOT",
+      "type": "buy",
+      "change": "0.74%"
+    },
+    {
+      "symbol": "ABT",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "CVS",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "CVX",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "DUK",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "EL",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "GILD",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "MDT",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "SO",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "XOM",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "VOO",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "Q",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "DD",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "INTC",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "TLT",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "MU",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "JNJ",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "JPM",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "BAC",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "COF",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "WBD",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "FDX",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "FOXA",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
+    },
+    {
+      "symbol": "MRK",
+      "action": "HOT",
+      "type": "buy",
+      "change": "N/A"
     }
   ],
   "status": "Online",

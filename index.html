@@ -36,7 +36,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr; /* Changed to single column */
             gap: var(--space-3);
             margin-bottom: var(--space-5);
         }
@@ -162,16 +162,27 @@
     </div>
 
     <div class="grid" id="view-signals">
+        <!-- 區塊 1: 迅狐戰略 (競賽) -->
         <div class="card">
             <h2>迅狐戰術 (競賽)</h2>
             <div class="signal-list" id="competition-signals">
                 <div class="loading">正在抓取最新訊號...</div>
             </div>
         </div>
+        
+        <!-- 區塊 2: 靈狐持倉 (長期) -->
         <div class="card">
-            <h2>靈狐 V5 (長期)</h2>
+            <h2>靈狐 V5 持倉</h2>
             <div class="signal-list" id="longterm-signals">
                 <div class="loading">正在抓取最新持倉...</div>
+            </div>
+        </div>
+
+        <!-- 區塊 3: 觀察名單 (New) -->
+        <div class="card">
+            <h2>觀察名單 (Watchlist)</h2>
+            <div class="signal-list" id="watchlist-signals">
+                <div class="loading">暫無觀察名單</div>
             </div>
         </div>
     </div>
@@ -195,7 +206,7 @@
     </div>
 
     <div class="footer">
-        © 2026 Spirit Fox Strategy • v5.3.0 Stable<br>
+        © 2026 Spirit Fox Strategy • v5.4.0 Stable<br>
         Last Update: <span id="update-time">Loading...</span>
     </div>
 
@@ -224,15 +235,25 @@
                     document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
+                // 1. 迅狐戰術
                 const compContainer = document.getElementById('competition-signals');
                 compContainer.innerHTML = (data.competition && data.competition.length > 0)
                     ? data.competition.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
                     : '<div class="loading">暫無競賽訊號</div>';
 
+                // 2. 靈狐持倉 (Filtering logic: if symbol is in longterm array)
                 const longContainer = document.getElementById('longterm-signals');
                 longContainer.innerHTML = (data.longterm && data.longterm.length > 0)
                     ? data.longterm.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
                     : '<div class="loading">暫無持倉數據</div>';
+
+                // 3. 觀察名單 (New: needs data source)
+                const watchContainer = document.getElementById('watchlist-signals');
+                if (data.watchlist && data.watchlist.length > 0) {
+                    watchContainer.innerHTML = data.watchlist.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('');
+                } else {
+                    watchContainer.innerHTML = '<div class="loading">暫無觀察名單</div>';
+                }
 
             } catch (error) {
                 console.error('Fetch error:', error);
