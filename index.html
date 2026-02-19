@@ -1,9 +1,3 @@
-const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
-const TG_INITDATA = TG ? TG.initData : '';
-function apiFetch(url) {
-  return fetch(url, { headers: TG_INITDATA ? { 'X-TG-INITDATA': TG_INITDATA } : {} });
-}
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -86,24 +80,6 @@ function apiFetch(url) {
             margin-top: var(--space-8);
             padding-bottom: calc(var(--space-4) + var(--safe-b));
         }
-        .img-wrap {
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            background: rgba(0, 0, 0, 0.25);
-            margin-top: 8px;
-        }
-        .img-wrap img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .note {
-            font-size: 13px;
-            color: var(--c-muted);
-            margin: var(--space-3) 0 0 0;
-            line-height: 1.5;
-        }
         .loading {
             opacity: 0.6;
             font-style: italic;
@@ -128,9 +104,6 @@ function apiFetch(url) {
             display: grid;
             grid-template-columns: 1fr;
             gap: var(--space-3);
-            /* Full-height layout inside Telegram viewport.
-               Height is computed precisely in JS and injected as --explorer-h.
-            */
             height: var(--explorer-h, calc(var(--tg-vh, 100vh) - 170px));
             min-height: 420px;
         }
@@ -217,7 +190,6 @@ function apiFetch(url) {
         </div>
     </div>
 
-    <!-- Workspace Explorer (toggle view) -->
     <div class="card" id="view-explorer" style="display:none; padding-bottom: calc(var(--space-4) + var(--safe-b));">
         <div id="explorer-topbar" style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3);">
             <h2 style="margin:0;">Workspace Explorer 📂</h2>
@@ -236,30 +208,25 @@ function apiFetch(url) {
         </div>
     </div>
 
-    <!-- Sage4 EVD 視覺資產卡片 -->
-    <div class="card">
-        <h2>Sage4 EVD 視覺資產</h2>
-        <div class="img-wrap">
-            <div class="placeholder-img" style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: #161c24; color: var(--text-secondary); font-size: 12px;">
-                [ Sage4 Scientific Render v1.2 ]
-            </div>
-        </div>
-        <p class="note">仿生抗阻塞螺旋流道 (Camel-inspired) & 壓力順應腔 (Giraffe-inspired) 技術實現示意圖。</p>
-    </div>
-
     <div class="footer">
         © 2026 Spirit Fox Strategy • v5.3.0 Stable<br>
         Last Update: <span id="update-time">2026-02-18 03:45 UTC</span>
     </div>
 
     <script>
-        // 動態抓取訊號函數
+        const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        const TG_INITDATA = TG ? TG.initData : '';
+        function apiFetch(url, options = {}) {
+            const headers = {
+                ...(options.headers || {}),
+                ...(TG_INITDATA ? { 'X-TG-INITDATA': TG_INITDATA } : {})
+            };
+            return fetch(url, { ...options, headers });
+        }
+
         async function fetchSignals() {
             try {
-                const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await apiFetch('/api/signals', {
-                    headers: initData ? { 'X-TG-INITDATA': initData } : {}
-                });
+                const response = await apiFetch('/api/signals');
                 const data = await response.json();
                 
                 if (data.updatedAt) {
@@ -282,19 +249,14 @@ function apiFetch(url) {
             }
         }
 
-        // Explorer Logic
         async function loadDirectory(path) {
             const listEl = document.getElementById('explorer-list');
             listEl.innerHTML = '<div class="loading">載入中...</div>';
             
             try {
-                const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await apiFetch(`\/api/workspace/list?path=${encodeURIComponent(path)}`,
-                    { headers: initData ? { 'X-TG-INITDATA': initData } : {} }
-                );
+                const response = await apiFetch(`/api/workspace/list?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
                 
-                // Update Breadcrumb
                 const breadcrumb = document.getElementById('explorer-breadcrumb');
                 let bcHtml = '<span onclick="loadDirectory(\'\')">root</span>';
                 if (data.currentPath) {
@@ -309,8 +271,7 @@ function apiFetch(url) {
                 }
                 breadcrumb.innerHTML = bcHtml;
 
-                // Render List
-                if (data.list.length === 0) {
+                if (!data.list || data.list.length === 0) {
                     listEl.innerHTML = '<div class="loading">空目錄</div>';
                     return;
                 }
@@ -333,10 +294,7 @@ function apiFetch(url) {
             previewEl.innerText = '載入內容中...';
             
             try {
-                const initData = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp.initData : '';
-                const response = await apiFetch(`\/api/workspace/view?path=${encodeURIComponent(path)}`,
-                    { headers: initData ? { 'X-TG-INITDATA': initData } : {} }
-                );
+                const response = await apiFetch(`/api/workspace/view?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -357,7 +315,6 @@ function apiFetch(url) {
             if (which === 'explorer') {
                 signals.style.display = 'none';
                 explorer.style.display = 'block';
-                // lazy-load
                 loadDirectory('');
             } else {
                 explorer.style.display = 'none';
@@ -365,26 +322,20 @@ function apiFetch(url) {
             }
         }
 
-        // 頁面加載時執行
         fetchSignals();
         setInterval(fetchSignals, 300000);
 
-        // ===== Telegram WebApp Theme / Viewport Adapter (v0.1) =====
         (function initTelegramAdapter() {
             const tg = window.Telegram && window.Telegram.WebApp;
             if (!tg) return;
 
             document.documentElement.setAttribute('data-tg', '1');
-
-            // Expand for better viewport usage
             try { tg.ready(); } catch {}
             try { tg.expand(); } catch {}
 
             function applyTheme() {
                 const p = tg.themeParams || {};
                 const r = document.documentElement;
-
-                // Best-effort mapping
                 if (p.bg_color) r.style.setProperty('--c-bg', p.bg_color);
                 if (p.section_bg_color) r.style.setProperty('--c-surface', p.section_bg_color);
                 if (p.secondary_bg_color) r.style.setProperty('--c-surface-2', p.secondary_bg_color);
@@ -392,17 +343,13 @@ function apiFetch(url) {
                 if (p.hint_color) r.style.setProperty('--c-muted', p.hint_color);
                 if (p.link_color) r.style.setProperty('--c-accent', p.link_color);
                 if (p.button_color) r.style.setProperty('--c-accent', p.button_color);
-                // button_text_color could be used later for CTA buttons
             }
 
             function applyViewport() {
-                // Telegram provides stable viewport height via CSS var
-                // We'll expose it as --tg-vh so layout can use it if needed.
                 const r = document.documentElement;
                 const tgVh = getComputedStyle(r).getPropertyValue('--tg-viewport-height').trim();
                 if (tgVh) r.style.setProperty('--tg-vh', tgVh);
 
-                // Precise explorer height: viewport - (topbar + breadcrumb + card padding)
                 try {
                     const explorerCard = document.getElementById('view-explorer');
                     const explorerTop = document.getElementById('explorer-topbar');
@@ -411,7 +358,6 @@ function apiFetch(url) {
 
                     if (!explorerCard || !container) return;
 
-                    // Need the card to be measurable; temporarily show it if hidden.
                     const wasHidden = explorerCard.style.display === 'none';
                     if (wasHidden) explorerCard.style.display = 'block';
 
@@ -422,16 +368,11 @@ function apiFetch(url) {
                     const topH = explorerTop ? explorerTop.getBoundingClientRect().height : 0;
                     const bcH = explorerBc ? explorerBc.getBoundingClientRect().height : 0;
 
-                    // Compute the exact vertical gap between breadcrumb and container
                     const bcBottom = explorerBc ? explorerBc.getBoundingClientRect().bottom : (explorerTop ? explorerTop.getBoundingClientRect().bottom : explorerCard.getBoundingClientRect().top);
                     const containerTop = container.getBoundingClientRect().top;
                     const gapExact = Math.max(0, containerTop - bcBottom);
 
                     const vhPx = tgVh.endsWith('px') ? parseFloat(tgVh) : window.innerHeight;
-
-                    // Available height = viewport - (card top offset + paddings + top sections + exact gap) - footer safe buffer
-                    // We keep a minimal buffer for rounding/scrollbar safety.
-                    // Use design token when possible.
                     const safety = parseFloat(getComputedStyle(r).getPropertyValue('--space-2')) || 8;
                     const available = Math.max(320, vhPx - (padTop + padBottom + topH + bcH + gapExact + safety));
 
@@ -445,12 +386,8 @@ function apiFetch(url) {
             applyViewport();
 
             try {
-                tg.onEvent('themeChanged', () => {
-                    applyTheme();
-                });
-                tg.onEvent('viewportChanged', () => {
-                    applyViewport();
-                });
+                tg.onEvent('themeChanged', () => applyTheme());
+                tg.onEvent('viewportChanged', () => applyViewport());
             } catch {}
         })();
     </script>
