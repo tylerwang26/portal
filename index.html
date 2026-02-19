@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小i 🦊 Mobile Portal v5.7</title>
+    <title>小i 🦊 Mobile Portal v5.8</title>
     <link rel="stylesheet" href="/tokens.css" />
     <style>
         body {
@@ -211,7 +211,7 @@
 
     <div class="grid" id="view-signals">
         <div class="card">
-            <h2>迅狐戰術 (競賽)</h2>
+            <h2>迅狐戰術 (Competition)</h2>
             <div class="signal-list" id="competition-signals">
                 <div class="loading">正在抓取最新訊號...</div>
             </div>
@@ -221,13 +221,6 @@
             <h2>靈狐 V5 持倉</h2>
             <div class="signal-list" id="longterm-signals">
                 <div class="loading">正在抓取最新持倉...</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>觀察名單 (Watchlist)</h2>
-            <div class="signal-list" id="watchlist-signals">
-                <div class="loading">暫無觀察名單</div>
             </div>
         </div>
     </div>
@@ -251,7 +244,7 @@
     </div>
 
     <div class="footer">
-        © 2026 Spirit Fox Strategy • v5.7.0 Stable<br>
+        © 2026 Spirit Fox Strategy • v5.8.0 Stable<br>
         Last Update: <span id="update-time">Loading...</span>
     </div>
 
@@ -331,19 +324,12 @@
                 const compContainer = document.getElementById('competition-signals');
                 compContainer.innerHTML = (data.competition && data.competition.length > 0)
                     ? data.competition.map(renderItem).join('')
-                    : '<div class="loading">暫無競賽訊號</div>';
+                    : '<div class="loading">暫無訊號</div>';
 
                 const longContainer = document.getElementById('longterm-signals');
                 longContainer.innerHTML = (data.longterm && data.longterm.length > 0)
                     ? data.longterm.map(renderItem).join('')
                     : '<div class="loading">暫無持倉數據</div>';
-
-                const watchContainer = document.getElementById('watchlist-signals');
-                if (data.watchlist && data.watchlist.length > 0) {
-                    watchContainer.innerHTML = data.watchlist.map(renderItem).join('');
-                } else {
-                    watchContainer.innerHTML = '<div class="loading">暫無觀察名單</div>';
-                }
 
             } catch (error) {
                 console.error('Fetch error:', error);
@@ -352,7 +338,7 @@
         }
 
         async function loadDirectory(path) {
-            // ... (Explorer logic unchanged) ...
+            // ... (Explorer logic remains unchanged) ...
             const listEl = document.getElementById('explorer-list');
             listEl.innerHTML = '<div class="loading">載入中...</div>';
             try {
@@ -387,7 +373,7 @@
         }
 
         async function previewFile(path) {
-            // ... (Preview logic unchanged) ...
+            // ... (Preview logic remains unchanged) ...
             const previewEl = document.getElementById('file-preview');
             previewEl.innerText = '載入內容中...';
             try {
