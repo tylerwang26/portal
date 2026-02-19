@@ -67,7 +67,9 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
         .signal-item:last-child { border: none; }
+        .symbol-wrapper { display: flex; flex-direction: column; }
         .symbol { font-weight: 600; font-size: var(--fs-lg); }
+        .name { font-size: var(--fs-xs); color: var(--c-muted); margin-top: 2px; }
         .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); }
         .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
         .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
@@ -206,7 +208,7 @@
     </div>
 
     <div class="footer">
-        © 2026 Spirit Fox Strategy • v5.4.0 Stable<br>
+        © 2026 Spirit Fox Strategy • v5.4.1 Stable<br>
         Last Update: <span id="update-time">Loading...</span>
     </div>
 
@@ -235,22 +237,32 @@
                     document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
+                // Helper to render items with name
+                const renderItem = (s) => `
+                    <div class="signal-item">
+                        <div class="symbol-wrapper">
+                            <span class="symbol">${s.symbol}</span>
+                            ${s.name ? `<span class="name">${s.name}</span>` : ''}
+                        </div>
+                        <span class="action ${s.type || 'wait'}">${s.action}</span>
+                    </div>`;
+
                 // 1. 迅狐戰術
                 const compContainer = document.getElementById('competition-signals');
                 compContainer.innerHTML = (data.competition && data.competition.length > 0)
-                    ? data.competition.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
+                    ? data.competition.map(renderItem).join('')
                     : '<div class="loading">暫無競賽訊號</div>';
 
-                // 2. 靈狐持倉 (Filtering logic: if symbol is in longterm array)
+                // 2. 靈狐持倉
                 const longContainer = document.getElementById('longterm-signals');
                 longContainer.innerHTML = (data.longterm && data.longterm.length > 0)
-                    ? data.longterm.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
+                    ? data.longterm.map(renderItem).join('')
                     : '<div class="loading">暫無持倉數據</div>';
 
-                // 3. 觀察名單 (New: needs data source)
+                // 3. 觀察名單
                 const watchContainer = document.getElementById('watchlist-signals');
                 if (data.watchlist && data.watchlist.length > 0) {
-                    watchContainer.innerHTML = data.watchlist.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('');
+                    watchContainer.innerHTML = data.watchlist.map(renderItem).join('');
                 } else {
                     watchContainer.innerHTML = '<div class="loading">暫無觀察名單</div>';
                 }
