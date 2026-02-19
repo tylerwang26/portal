@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小i 🦊 Mobile Portal v5.3</title>
+    <title>小i 🦊 Mobile Portal v5.6</title>
     <link rel="stylesheet" href="/tokens.css" />
     <style>
         body {
@@ -36,7 +36,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: 1fr; /* Changed to single column */
+            grid-template-columns: 1fr;
             gap: var(--space-3);
             margin-bottom: var(--space-5);
         }
@@ -67,11 +67,13 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
         .signal-item:last-child { border: none; }
+        
         .symbol-wrapper { 
             display: flex; 
-            flex-direction: row; 
-            align-items: baseline; 
-            gap: 8px; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            min-width: 80px;
         }
         .symbol { font-weight: 600; font-size: var(--fs-lg); color: var(--c-text); }
         .name { 
@@ -81,23 +83,31 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 120px;
+            max-width: 100px;
         }
-        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); }
-        .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
-        .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
-        .wait { background: rgba(145, 158, 171, 0.2); color: var(--c-muted); }
-        
-        /* New Sparkline Styles */
+
+        .price-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-right: 8px;
+            min-width: 60px;
+        }
+        .price-val { font-size: var(--fs-md); font-weight: 600; }
+        .price-chg { font-size: var(--fs-xs); font-weight: 500; }
+        .txt-up { color: var(--c-success); }
+        .txt-down { color: var(--c-danger); }
+        .txt-flat { color: var(--c-muted); }
+
         .sparkline {
             width: 60px;
             height: 24px;
             margin-left: auto;
-            margin-right: 12px;
+            margin-right: 8px;
         }
         .sparkline polyline {
             fill: none;
-            stroke-width: 2;
+            stroke-width: 1.5;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
@@ -105,6 +115,11 @@
         .spark-down { stroke: var(--c-danger); }
         .spark-flat { stroke: var(--c-muted); }
 
+        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); margin-left: 4px; }
+        .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
+        .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
+        .wait { background: rgba(145, 158, 171, 0.2); color: var(--c-muted); }
+        
         .footer {
             text-align: center;
             color: var(--c-muted);
@@ -194,7 +209,6 @@
     </div>
 
     <div class="grid" id="view-signals">
-        <!-- 區塊 1: 迅狐戰略 (競賽) -->
         <div class="card">
             <h2>迅狐戰術 (競賽)</h2>
             <div class="signal-list" id="competition-signals">
@@ -202,7 +216,6 @@
             </div>
         </div>
         
-        <!-- 區塊 2: 靈狐持倉 (長期) -->
         <div class="card">
             <h2>靈狐 V5 持倉</h2>
             <div class="signal-list" id="longterm-signals">
@@ -210,7 +223,6 @@
             </div>
         </div>
 
-        <!-- 區塊 3: 觀察名單 (New) -->
         <div class="card">
             <h2>觀察名單 (Watchlist)</h2>
             <div class="signal-list" id="watchlist-signals">
@@ -238,7 +250,7 @@
     </div>
 
     <div class="footer">
-        © 2026 Spirit Fox Strategy • v5.4.1 Stable<br>
+        © 2026 Spirit Fox Strategy • v5.6.0 Stable<br>
         Last Update: <span id="update-time">Loading...</span>
     </div>
 
@@ -247,7 +259,6 @@
         const TG_INITDATA = TG ? TG.initData : '';
         
         function apiFetch(url, options = {}) {
-            // 加入 cache buster 避免讀到舊數據
             const sep = url.includes('?') ? '&' : '?';
             const finalUrl = `${url}${sep}_t=${Date.now()}`;
             const headers = {
@@ -267,56 +278,50 @@
                     document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
-                // Function to generate SVG Sparkline
                 const createSparkline = (points) => {
                     if (!points || points.length < 2) return '';
-                    
                     const width = 60;
                     const height = 24;
                     const min = Math.min(...points);
                     const max = Math.max(...points);
-                    const range = max - min || 1; // avoid divide by zero
-                    
-                    // Normalize points
+                    const range = max - min || 1;
                     const coords = points.map((p, i) => {
                         const x = (i / (points.length - 1)) * width;
-                        const y = height - ((p - min) / range) * height; // Invert Y
+                        const y = height - ((p - min) / range) * height;
                         return `${x},${y}`;
                     }).join(' ');
-
                     const trendClass = points[points.length-1] > points[0] ? 'spark-up' : (points[points.length-1] < points[0] ? 'spark-down' : 'spark-flat');
-
-                    return `
-                        <svg class="sparkline" viewBox="0 0 ${width} ${height}">
-                            <polyline points="${coords}" class="${trendClass}" />
-                        </svg>
-                    `;
+                    return `<svg class="sparkline" viewBox="0 0 ${width} ${height}"><polyline points="${coords}" class="${trendClass}" /></svg>`;
                 };
 
-                // Helper to render items with name & sparkline
-                const renderItem = (s) => `
+                const renderItem = (s) => {
+                    const isUp = s.change && !s.change.includes('-');
+                    const colorClass = isUp ? 'txt-up' : (s.change === '0.00%' ? 'txt-flat' : 'txt-down');
+                    return `
                     <div class="signal-item">
                         <div class="symbol-wrapper">
                             <span class="symbol">${s.symbol}</span>
                             ${s.name ? `<span class="name">${s.name}</span>` : ''}
                         </div>
+                        <div class="price-info">
+                            <span class="price-val ${colorClass}">${s.price || '-'}</span>
+                            <span class="price-chg ${colorClass}">${s.change || '0%'}</span>
+                        </div>
                         ${createSparkline(s.sparkline)}
                         <span class="action ${s.type || 'wait'}">${s.action}</span>
                     </div>`;
+                };
 
-                // 1. 迅狐戰術
                 const compContainer = document.getElementById('competition-signals');
                 compContainer.innerHTML = (data.competition && data.competition.length > 0)
                     ? data.competition.map(renderItem).join('')
                     : '<div class="loading">暫無競賽訊號</div>';
 
-                // 2. 靈狐持倉
                 const longContainer = document.getElementById('longterm-signals');
                 longContainer.innerHTML = (data.longterm && data.longterm.length > 0)
                     ? data.longterm.map(renderItem).join('')
                     : '<div class="loading">暫無持倉數據</div>';
 
-                // 3. 觀察名單
                 const watchContainer = document.getElementById('watchlist-signals');
                 if (data.watchlist && data.watchlist.length > 0) {
                     watchContainer.innerHTML = data.watchlist.map(renderItem).join('');
@@ -331,13 +336,12 @@
         }
 
         async function loadDirectory(path) {
+            // ... (Explorer logic remains unchanged) ...
             const listEl = document.getElementById('explorer-list');
             listEl.innerHTML = '<div class="loading">載入中...</div>';
-            
             try {
                 const response = await apiFetch(`/api/workspace/list?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
-                
                 const breadcrumb = document.getElementById('explorer-breadcrumb');
                 let bcHtml = '<span onclick="loadDirectory(\'\')">root</span>';
                 if (data.currentPath) {
@@ -350,12 +354,10 @@
                     });
                 }
                 breadcrumb.innerHTML = bcHtml;
-
                 if (!data.list || data.list.length === 0) {
                     listEl.innerHTML = '<div class="loading">空目錄</div>';
                     return;
                 }
-
                 listEl.innerHTML = data.list.map(item => `
                     <div class="file-item ${item.isDirectory ? 'directory' : ''}" 
                          onclick="${item.isDirectory ? `loadDirectory('${item.path.replace(/'/g, "\\'")}')` : `previewFile('${item.path.replace(/'/g, "\\'")}')`}">
@@ -363,25 +365,20 @@
                         ${item.name}
                     </div>
                 `).join('');
-
             } catch (error) {
                 listEl.innerHTML = '<div class="loading" style="color: var(--c-danger)">載入失敗</div>';
             }
         }
 
         async function previewFile(path) {
+            // ... (Preview logic remains unchanged) ...
             const previewEl = document.getElementById('file-preview');
             previewEl.innerText = '載入內容中...';
-            
             try {
                 const response = await apiFetch(`/api/workspace/view?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
-                
-                if (data.error) {
-                    previewEl.innerText = `錯誤: ${data.error}`;
-                } else {
-                    previewEl.innerText = data.content;
-                }
+                if (data.error) previewEl.innerText = `錯誤: ${data.error}`;
+                else previewEl.innerText = data.content;
             } catch (error) {
                 previewEl.innerText = '無法載入檔案內容';
             }
@@ -401,13 +398,12 @@
         }
 
         fetchSignals();
-        setInterval(fetchSignals, 60000); // 縮短更新頻率至 1 分鐘
+        setInterval(fetchSignals, 60000); 
 
         (function initTelegramAdapter() {
             const tg = window.Telegram && window.Telegram.WebApp;
             if (!tg) return;
             try { tg.ready(); tg.expand(); } catch {}
-            
             function applyTheme() {
                 const p = tg.themeParams || {};
                 const r = document.documentElement;
@@ -419,7 +415,6 @@
                 if (p.link_color) r.style.setProperty('--c-accent', p.link_color);
                 if (p.button_color) r.style.setProperty('--c-accent', p.button_color);
             }
-            
             applyTheme();
             tg.onEvent('themeChanged', applyTheme);
         })();
