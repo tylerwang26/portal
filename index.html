@@ -108,9 +108,7 @@
             min-height: 420px;
         }
         @media (min-width: 768px) {
-            .explorer-container {
-                grid-template-columns: 300px 1fr;
-            }
+            .explorer-container { grid-template-columns: 300px 1fr; }
         }
         .file-list {
             height: 100%;
@@ -128,17 +126,9 @@
             align-items: center;
             transition: background 0.2s;
         }
-        .file-item:hover {
-            background: rgba(255,255,255,0.05);
-        }
-        .file-item.directory {
-            color: var(--c-accent);
-            font-weight: 700;
-        }
-        .file-item i {
-            margin-right: 8px;
-            font-style: normal;
-        }
+        .file-item:hover { background: rgba(255,255,255,0.05); }
+        .file-item.directory { color: var(--c-accent); font-weight: 700; }
+        .file-item i { margin-right: 8px; font-style: normal; }
         .preview-pane {
             background: var(--c-surface-2);
             border-radius: var(--r-sm);
@@ -158,12 +148,8 @@
             display: flex;
             gap: var(--space-1);
         }
-        .breadcrumb span {
-            cursor: pointer;
-        }
-        .breadcrumb span:hover {
-            color: var(--c-accent);
-        }
+        .breadcrumb span { cursor: pointer; }
+        .breadcrumb span:hover { color: var(--c-accent); }
     </style>
 </head>
 <body>
@@ -210,18 +196,22 @@
 
     <div class="footer">
         © 2026 Spirit Fox Strategy • v5.3.0 Stable<br>
-        Last Update: <span id="update-time">2026-02-18 03:45 UTC</span>
+        Last Update: <span id="update-time">Loading...</span>
     </div>
 
     <script>
         const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
         const TG_INITDATA = TG ? TG.initData : '';
+        
         function apiFetch(url, options = {}) {
+            // 加入 cache buster 避免讀到舊數據
+            const sep = url.includes('?') ? '&' : '?';
+            const finalUrl = `${url}${sep}_t=${Date.now()}`;
             const headers = {
                 ...(options.headers || {}),
                 ...(TG_INITDATA ? { 'X-TG-INITDATA': TG_INITDATA } : {})
             };
-            return fetch(url, { ...options, headers });
+            return fetch(finalUrl, { ...options, headers });
         }
 
         async function fetchSignals() {
@@ -229,23 +219,24 @@
                 const response = await apiFetch('/api/signals');
                 const data = await response.json();
                 
-                if (data.updatedAt) {
-                    document.getElementById('update-time').innerText = new Date(data.updatedAt).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
+                if (data.updatedAt || data.last_update) {
+                    const time = data.updatedAt || data.last_update;
+                    document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
                 const compContainer = document.getElementById('competition-signals');
-                compContainer.innerHTML = data.competition && data.competition.length > 0 
+                compContainer.innerHTML = (data.competition && data.competition.length > 0)
                     ? data.competition.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
                     : '<div class="loading">暫無競賽訊號</div>';
 
                 const longContainer = document.getElementById('longterm-signals');
-                longContainer.innerHTML = data.longterm && data.longterm.length > 0
+                longContainer.innerHTML = (data.longterm && data.longterm.length > 0)
                     ? data.longterm.map(s => `<div class="signal-item"><span class="symbol">${s.symbol}</span><span class="action ${s.type || 'wait'}">${s.action}</span></div>`).join('')
                     : '<div class="loading">暫無持倉數據</div>';
 
             } catch (error) {
                 console.error('Fetch error:', error);
-                document.querySelectorAll('.loading').forEach(el => el.innerText = '載入失敗');
+                document.querySelectorAll('.loading').forEach(el => el.innerText = '連線失敗');
             }
         }
 
@@ -265,8 +256,7 @@
                     parts.forEach(p => {
                         if (!p) return;
                         currentFull += (currentFull ? '/' : '') + p;
-                        const target = currentFull;
-                        bcHtml += ` / <span onclick="loadDirectory('${target.replace(/'/g, "\\'")}')">${p}</span>`;
+                        bcHtml += ` / <span onclick="loadDirectory('${currentFull.replace(/'/g, "\\'")}')">${p}</span>`;
                     });
                 }
                 breadcrumb.innerHTML = bcHtml;
@@ -310,8 +300,6 @@
         function toggleView(which) {
             const signals = document.getElementById('view-signals');
             const explorer = document.getElementById('view-explorer');
-            if (!signals || !explorer) return;
-
             if (which === 'explorer') {
                 signals.style.display = 'none';
                 explorer.style.display = 'block';
@@ -323,16 +311,13 @@
         }
 
         fetchSignals();
-        setInterval(fetchSignals, 300000);
+        setInterval(fetchSignals, 60000); // 縮短更新頻率至 1 分鐘
 
         (function initTelegramAdapter() {
             const tg = window.Telegram && window.Telegram.WebApp;
             if (!tg) return;
-
-            document.documentElement.setAttribute('data-tg', '1');
-            try { tg.ready(); } catch {}
-            try { tg.expand(); } catch {}
-
+            try { tg.ready(); tg.expand(); } catch {}
+            
             function applyTheme() {
                 const p = tg.themeParams || {};
                 const r = document.documentElement;
@@ -344,51 +329,9 @@
                 if (p.link_color) r.style.setProperty('--c-accent', p.link_color);
                 if (p.button_color) r.style.setProperty('--c-accent', p.button_color);
             }
-
-            function applyViewport() {
-                const r = document.documentElement;
-                const tgVh = getComputedStyle(r).getPropertyValue('--tg-viewport-height').trim();
-                if (tgVh) r.style.setProperty('--tg-vh', tgVh);
-
-                try {
-                    const explorerCard = document.getElementById('view-explorer');
-                    const explorerTop = document.getElementById('explorer-topbar');
-                    const explorerBc = document.getElementById('explorer-breadcrumb');
-                    const container = document.querySelector('#view-explorer .explorer-container');
-
-                    if (!explorerCard || !container) return;
-
-                    const wasHidden = explorerCard.style.display === 'none';
-                    if (wasHidden) explorerCard.style.display = 'block';
-
-                    const cardStyles = getComputedStyle(explorerCard);
-                    const padTop = parseFloat(cardStyles.paddingTop) || 0;
-                    const padBottom = parseFloat(cardStyles.paddingBottom) || 0;
-
-                    const topH = explorerTop ? explorerTop.getBoundingClientRect().height : 0;
-                    const bcH = explorerBc ? explorerBc.getBoundingClientRect().height : 0;
-
-                    const bcBottom = explorerBc ? explorerBc.getBoundingClientRect().bottom : (explorerTop ? explorerTop.getBoundingClientRect().bottom : explorerCard.getBoundingClientRect().top);
-                    const containerTop = container.getBoundingClientRect().top;
-                    const gapExact = Math.max(0, containerTop - bcBottom);
-
-                    const vhPx = tgVh.endsWith('px') ? parseFloat(tgVh) : window.innerHeight;
-                    const safety = parseFloat(getComputedStyle(r).getPropertyValue('--space-2')) || 8;
-                    const available = Math.max(320, vhPx - (padTop + padBottom + topH + bcH + gapExact + safety));
-
-                    r.style.setProperty('--explorer-h', `${Math.round(available)}px`);
-
-                    if (wasHidden) explorerCard.style.display = 'none';
-                } catch {}
-            }
-
+            
             applyTheme();
-            applyViewport();
-
-            try {
-                tg.onEvent('themeChanged', () => applyTheme());
-                tg.onEvent('viewportChanged', () => applyViewport());
-            } catch {}
+            tg.onEvent('themeChanged', applyTheme);
         })();
     </script>
 </body>
