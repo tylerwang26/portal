@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小i 🦊 Mobile Portal v5.6</title>
+    <title>小i 🦊 Mobile Portal v5.7</title>
     <link rel="stylesheet" href="/tokens.css" />
     <style>
         body {
@@ -90,8 +90,9 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            margin-right: 8px;
-            min-width: 60px;
+            margin-right: 12px;
+            min-width: 70px;
+            margin-left: auto; /* Push to the right edge of left cluster */
         }
         .price-val { font-size: var(--fs-md); font-weight: 600; }
         .price-chg { font-size: var(--fs-xs); font-weight: 500; }
@@ -102,8 +103,8 @@
         .sparkline {
             width: 60px;
             height: 24px;
-            margin-left: auto;
             margin-right: 8px;
+            /* No auto margin-left here, we let flex layout handle spacing */
         }
         .sparkline polyline {
             fill: none;
@@ -250,7 +251,7 @@
     </div>
 
     <div class="footer">
-        © 2026 Spirit Fox Strategy • v5.6.0 Stable<br>
+        © 2026 Spirit Fox Strategy • v5.7.0 Stable<br>
         Last Update: <span id="update-time">Loading...</span>
     </div>
 
@@ -278,7 +279,7 @@
                     document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
-                const createSparkline = (points) => {
+                const createSparkline = (points, colorClass) => {
                     if (!points || points.length < 2) return '';
                     const width = 60;
                     const height = 24;
@@ -290,13 +291,28 @@
                         const y = height - ((p - min) / range) * height;
                         return `${x},${y}`;
                     }).join(' ');
-                    const trendClass = points[points.length-1] > points[0] ? 'spark-up' : (points[points.length-1] < points[0] ? 'spark-down' : 'spark-flat');
-                    return `<svg class="sparkline" viewBox="0 0 ${width} ${height}"><polyline points="${coords}" class="${trendClass}" /></svg>`;
+                    // Use colorClass to determine sparkline color
+                    const sparkClass = colorClass === 'txt-up' ? 'spark-up' : (colorClass === 'txt-down' ? 'spark-down' : 'spark-flat');
+                    return `<svg class="sparkline" viewBox="0 0 ${width} ${height}"><polyline points="${coords}" class="${sparkClass}" /></svg>`;
                 };
 
                 const renderItem = (s) => {
-                    const isUp = s.change && !s.change.includes('-');
-                    const colorClass = isUp ? 'txt-up' : (s.change === '0.00%' ? 'txt-flat' : 'txt-down');
+                    let chgText = s.change || '0%';
+                    let isUp = false;
+                    let isDown = false;
+                    
+                    if (chgText !== 'N/A' && chgText !== '0%' && chgText !== '0.00%') {
+                        if (chgText.includes('-')) {
+                            isDown = true;
+                        } else {
+                            isUp = true;
+                            // Add '+' if not present
+                            if (!chgText.startsWith('+')) chgText = '+' + chgText;
+                        }
+                    }
+                    
+                    const colorClass = isUp ? 'txt-up' : (isDown ? 'txt-down' : 'txt-flat');
+                    
                     return `
                     <div class="signal-item">
                         <div class="symbol-wrapper">
@@ -305,9 +321,9 @@
                         </div>
                         <div class="price-info">
                             <span class="price-val ${colorClass}">${s.price || '-'}</span>
-                            <span class="price-chg ${colorClass}">${s.change || '0%'}</span>
+                            <span class="price-chg ${colorClass}">${chgText}</span>
                         </div>
-                        ${createSparkline(s.sparkline)}
+                        ${createSparkline(s.sparkline, colorClass)}
                         <span class="action ${s.type || 'wait'}">${s.action}</span>
                     </div>`;
                 };
@@ -336,7 +352,7 @@
         }
 
         async function loadDirectory(path) {
-            // ... (Explorer logic remains unchanged) ...
+            // ... (Explorer logic unchanged) ...
             const listEl = document.getElementById('explorer-list');
             listEl.innerHTML = '<div class="loading">載入中...</div>';
             try {
@@ -371,7 +387,7 @@
         }
 
         async function previewFile(path) {
-            // ... (Preview logic remains unchanged) ...
+            // ... (Preview logic unchanged) ...
             const previewEl = document.getElementById('file-preview');
             previewEl.innerText = '載入內容中...';
             try {
