@@ -67,10 +67,23 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
         .signal-item:last-child { border: none; }
-        .symbol-wrapper { display: flex; flex-direction: column; }
-        .symbol { font-weight: 600; font-size: var(--fs-lg); }
-        .name { font-size: var(--fs-xs); color: var(--c-muted); margin-top: 2px; }
-        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); }
+        .symbol-wrapper { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: baseline; 
+            gap: 8px; 
+        }
+        .symbol { font-weight: 600; font-size: var(--fs-lg); color: var(--c-text); }
+        .name { 
+            font-size: var(--fs-sm); 
+            color: var(--c-muted); 
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); margin-left: auto; }
         .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
         .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
         .wait { background: rgba(145, 158, 171, 0.2); color: var(--c-muted); }
