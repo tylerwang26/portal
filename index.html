@@ -83,11 +83,28 @@
             text-overflow: ellipsis;
             max-width: 120px;
         }
-        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); margin-left: auto; }
+        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); }
         .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
         .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
         .wait { background: rgba(145, 158, 171, 0.2); color: var(--c-muted); }
         
+        /* New Sparkline Styles */
+        .sparkline {
+            width: 60px;
+            height: 24px;
+            margin-left: auto;
+            margin-right: 12px;
+        }
+        .sparkline polyline {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .spark-up { stroke: var(--c-success); }
+        .spark-down { stroke: var(--c-danger); }
+        .spark-flat { stroke: var(--c-muted); }
+
         .footer {
             text-align: center;
             color: var(--c-muted);
@@ -250,13 +267,40 @@
                     document.getElementById('update-time').innerText = new Date(time).toLocaleString('zh-TW', { hour12: false }) + ' UTC';
                 }
 
-                // Helper to render items with name
+                // Function to generate SVG Sparkline
+                const createSparkline = (points) => {
+                    if (!points || points.length < 2) return '';
+                    
+                    const width = 60;
+                    const height = 24;
+                    const min = Math.min(...points);
+                    const max = Math.max(...points);
+                    const range = max - min || 1; // avoid divide by zero
+                    
+                    // Normalize points
+                    const coords = points.map((p, i) => {
+                        const x = (i / (points.length - 1)) * width;
+                        const y = height - ((p - min) / range) * height; // Invert Y
+                        return `${x},${y}`;
+                    }).join(' ');
+
+                    const trendClass = points[points.length-1] > points[0] ? 'spark-up' : (points[points.length-1] < points[0] ? 'spark-down' : 'spark-flat');
+
+                    return `
+                        <svg class="sparkline" viewBox="0 0 ${width} ${height}">
+                            <polyline points="${coords}" class="${trendClass}" />
+                        </svg>
+                    `;
+                };
+
+                // Helper to render items with name & sparkline
                 const renderItem = (s) => `
                     <div class="signal-item">
                         <div class="symbol-wrapper">
                             <span class="symbol">${s.symbol}</span>
                             ${s.name ? `<span class="name">${s.name}</span>` : ''}
                         </div>
+                        ${createSparkline(s.sparkline)}
                         <span class="action ${s.type || 'wait'}">${s.action}</span>
                     </div>`;
 

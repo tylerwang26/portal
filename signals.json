@@ -1,6 +1,6 @@
 {
-  "last_update": "2026-02-19T10:48:47.739Z",
-  "updatedAt": "2026-02-19T10:48:47.740Z",
+  "last_update": "2026-02-19T11:00:08.790Z",
+  "updatedAt": "2026-02-19T11:00:08.790Z",
   "competition": [],
   "longterm": [
     {
@@ -8,98 +8,112 @@
       "name": "元大台灣50",
       "action": "KEEP",
       "type": "buy",
-      "change": "2.25%"
+      "change": "2.25%",
+      "sparkline": []
     },
     {
       "symbol": "006208",
       "name": "富邦台50",
       "action": "KEEP",
       "type": "buy",
-      "change": "2.20%"
+      "change": "2.20%",
+      "sparkline": []
     },
     {
       "symbol": "2330",
       "name": "台積電",
       "action": "KEEP",
       "type": "buy",
-      "change": "1.86%"
+      "change": "1.86%",
+      "sparkline": []
     },
     {
       "symbol": "6274",
       "name": "台燿",
       "action": "KEEP",
       "type": "buy",
-      "change": "0.00%"
+      "change": "0.00%",
+      "sparkline": []
     },
     {
       "symbol": "TSLA",
       "name": "Tesla",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "MSFT",
       "name": "Microsoft",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "AAPL",
       "name": "Apple",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "GOOGL",
       "name": "Alphabet",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "NFLX",
       "name": "Netflix",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "NVDA",
       "name": "Nvidia",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "SOXL",
       "name": "3X Semiconductor",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "NQ=F",
       "name": "那斯達克",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "GC=F",
       "name": "黃金",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "^TWII",
       "name": "加權指數",
       "action": "KEEP",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     }
   ],
   "watchlist": [
@@ -108,196 +122,224 @@
       "name": "鴻海",
       "action": "HOT",
       "type": "buy",
-      "change": "2.71%"
+      "change": "2.71%",
+      "sparkline": []
     },
     {
       "symbol": "2454",
       "name": "聯發科",
       "action": "HOT",
       "type": "buy",
-      "change": "0.54%"
+      "change": "0.54%",
+      "sparkline": []
     },
     {
       "symbol": "3017",
       "name": "奇鋐",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "2603",
       "name": "長榮",
       "action": "HOT",
       "type": "buy",
-      "change": "0.00%"
+      "change": "0.00%",
+      "sparkline": []
     },
     {
       "symbol": "2881",
       "name": "富邦金",
       "action": "HOT",
       "type": "buy",
-      "change": "0.74%"
+      "change": "0.74%",
+      "sparkline": []
     },
     {
       "symbol": "ABT",
       "name": "Abbott Laboratories",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "CVS",
       "name": "CVS Health",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "CVX",
       "name": "Chevron",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "DUK",
       "name": "Duke Energy",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "EL",
       "name": "Estée Lauder",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "GILD",
       "name": "Gilead Sciences",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "MDT",
       "name": "Medtronic",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "SO",
       "name": "Southern Company",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "XOM",
       "name": "Exxon Mobil",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "VOO",
       "name": "Vanguard S&P 500 ETF",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "Q",
       "name": "QuinStreet",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "DD",
       "name": "DuPont",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "INTC",
       "name": "Intel",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "TLT",
       "name": "iShares 20+ Year Treasury Bond ETF",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "MU",
       "name": "Micron Technology",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "JNJ",
       "name": "Johnson & Johnson",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "JPM",
       "name": "JPMorgan Chase",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "BAC",
       "name": "Bank of America",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "COF",
       "name": "Capital One Financial",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "WBD",
       "name": "Warner Bros. Discovery",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "FDX",
       "name": "FedEx",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "FOXA",
       "name": "Fox Corp Class A",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     },
     {
       "symbol": "MRK",
       "name": "Merck & Co.",
       "action": "HOT",
       "type": "buy",
-      "change": "N/A"
+      "change": "N/A",
+      "sparkline": []
     }
   ],
   "status": "Online",
