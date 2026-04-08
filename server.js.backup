@@ -3362,45 +3362,5 @@ starOfficePaths.forEach(p => {
 
 // Bind on IPv6 "::" so checks to http://localhost:<port> (often ::1) don't hang.
 // On most Linux setups this also accepts IPv4 via v4-mapped addresses.
-
-// ===== Stocks App Integration =====
-app.use('/stocks', express.static(path.join(__dirname, 'stocks-dist')));
-app.get('/stocks', (req, res) => res.sendFile(path.join(__dirname, 'stocks-dist', 'index.html')));
-
-// ===== Obsidian Vault Integration =====
-app.get('/vault/*', (req, res) => {
-    const filePath = path.join(WORKSPACE, 'obsidian_vault', req.params[0]);
-    if (!filePath.startsWith(path.join(WORKSPACE, 'obsidian_vault'))) {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-    fs.stat(filePath, (err, stats) => {
-        if (err) return res.status(404).json({ error: 'Not found' });
-        if (stats.isDirectory()) {
-            fs.readdir(filePath, (err, files) => {
-                if (err) return res.status(500).json({ error: 'Cannot read directory' });
-                res.json({ type: 'directory', files: files });
-            });
-        } else if (filePath.endsWith('.md')) {
-            res.sendFile(filePath);
-        } else {
-            res.status(400).json({ error: 'Only markdown files are supported' });
-        }
-    });
-});
-
-app.get('/api/vault/structure', (req, res) => {
-    const vaultPath = path.join(WORKSPACE, 'obsidian_vault');
-    function getStructure(dir, prefix = '') {
-        try {
-            const files = fs.readdirSync(dir);
-            return files.map(file => {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
-                return { name: file, type: stat.isDirectory() ? 'directory' : 'file', path: prefix ? `${prefix}/${file}` : file };
-            });
-        } catch (e) { return []; }
-    }
-    res.json({ structure: getStructure(vaultPath) });
-});
 app.listen(PORT, '::', () => console.log(`Portal server running on port ${PORT}`));
 app.get('/canvas', (req, res) => res.sendFile(path.join(__dirname, 'canvas.html')));

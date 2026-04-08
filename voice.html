@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fox Voice Portal</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        body { font-family: var(--font-sans, 'Inter', sans-serif); background: var(--c-bg, #05060a); color: var(--c-text, #fff); margin: 0; padding: 24px; }
+        .shell { max-width: 640px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        p { color: var(--c-muted, #8691a2); }
+        .card { background: rgba(255,255,255,0.04); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-top: 16px; }
+        .controls { display: flex; gap: 12px; margin-bottom: 16px; }
+        button { flex: 1; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        button.record { background: #ff4477; color: #fff; }
+        button.stop { background: #3740ff; color: #fff; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .status { font-family: var(--font-mono, 'SFMono'); font-size: 14px; margin-bottom: 12px; color: var(--c-muted, #a0aec0); }
+        .transcript { background: rgba(0,0,0,0.35); border-radius: 12px; padding: 16px; min-height: 80px; line-height: 1.6; white-space: pre-wrap; }
+        audio { width: 100%; margin-top: 16px; }
+        .log { font-size: 13px; color: #a0aec0; margin-top: 16px; font-family: var(--font-mono, 'SFMono'); }
+    </style>
+</head>
+<body>
+<div class="shell">
+    <h1>🦊 Fox Voice Portal</h1>
+    <p>Press & hold Record 送出語音，後端會透過自建 Whisper / TTS 管線轉成文字與語音回覆。</p>
+
+    <div class="card">
+        <div class="controls">
+            <button id="btn-record" class="record">開始錄音</button>
+            <button id="btn-stop" class="stop" disabled>停止</button>
+        </div>
+        <div class="status" id="status-label">待命中...</div>
+        <div class="transcript" id="transcript-box">等待輸入</div>
+        <audio id="assistant-audio" controls></audio>
+        <div class="log" id="log-box"></div>
+    </div>
+</div>
+<script src="/voice.js"></script>
+</body>
+</html>

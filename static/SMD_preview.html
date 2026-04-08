@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SMD 標準化平均差 — Preview</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<style>body{font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial; padding:24px; font-size:18px; line-height:1.6; color:#111} pre{background:#f6f8fa;padding:12px;border-radius:8px;overflow:auto}</style>
+</head>
+<body>
+<div id="content">
+
+<!-- Raw markdown content below -->
+
+<pre id="md" style="display:none">
+<!-- FontSize: 18px -->
+# SMD 標準化平均差
+
+Standardized Mean Difference（SMD, 標準化平均差）＋95% 信賴區間
+
+SMD 是效果大小指標
+
+約 0.2：小效果
+約 0.5：中等效果
+≥0.8：大效果
+
+
+負值（−）：代表實驗組比對照組「更好」（失眠症狀下降）
+正值（＋）：代表實驗組效果比對照組「更好（但方向相反，通常取決於量表定義）」
+
+📌 95% CI（信賴區間）
+
+如果整個區間 沒有跨過 0，表示結果具有統計顯著性
+
+# 下面我用**統計標準做法 + 公式 + 直觀解釋**，把 **SMD（Standardized Mean Difference）**一次講清楚。  
+我會用你前面那個 **CBT‑I、SMD = 0.61** 的脈絡來說。
+
+***
+
+## 一、SMD 是什麼？
+
+**SMD = 兩組平均差 ÷ 組內變異（標準差）**
+
+它的用途是：
+
+*   不同研究用**不同量表**（例如 ISI、PSQI）
+*   把效果轉成**同一尺度**來比較與合併（meta-analysis）
+
+***
+
+## 二、最基本的 SMD 計算公式（Cohen’s d）
+
+### ✅ 標準寫法
+
+$$
+\text{SMD} = d = \frac{\bar{X}_{\text{treat}} - \bar{X}_{\text{control}}}{SD_{\text{pooled}}}
+$$
+
+其中：
+
+$$
+SD_{\text{pooled}} = 
+\sqrt{
+\frac{(n_t - 1)SD_t^2 + (n_c - 1)SD_c^2}{n_t + n_c - 2}
+}
+$$
+
+### 變數說明
+
+*   $$\bar{X}_{\text{treat}}$$：治療組平均值
+*   $$\bar{X}_{\text{control}}$$：對照組平均值
+*   $$SD_t, SD_c$$：兩組標準差
+*   $$n_t, n_c$$：兩組樣本數
+
+***
+
+## 三、實際數字例子（直覺版）
+
+假設：
+
+| 組別    | 平均失眠分數 | SD |
+| ----- | ------ | -- |
+| CBT‑I | 10     | 4  |
+| 對照組   | 13     | 4  |
+
+### 計算：
+
+$$
+SMD = \frac{10 - 13}{4} = -0.75
+$$
+
+👉 表示 **CBT‑I 平均比對照好 0.75 個標準差**
+
+（負號只是方向，表示症狀下降）
+
+***
+
+## 四、為什麼 meta-analysis 常用 **Hedges’ g**？
+
+當樣本數不大時，Cohen’s d 會**偏樂觀**  
+所以統合分析幾乎都用 **Hedges’ g（修正後的 SMD）**
+
+### ✅ Hedges’ g 公式
+
+$$
+g = J \times d
+$$
+
+其中校正因子：
+
+$$
+J = 1 - \frac{3}{4(n_t + n_c) - 9}
+$$
+
+👉 當樣本變大，$$J \to 1$$，  
+👉 小樣本時，效果會被「拉回來一點」
+
+📌 **你那張表裡寫的 SMD，實務上 99% 指的就是 Hedges’ g**
+
+***
+
+## 五、SMD 在你的圖裡代表什麼？
+
+### 你看到的：
+
+$$
+\text{SMD} = 0.61 \; (0.37,\;0.85)
+$$
+
+實際意思是：
+
+$$
+0.61 = 
+\frac{\text{CBT‑I 與對照組的平均差}}
+{\text{研究內的典型變異（SD）}}
+$$
+
+也就是：
+
+> CBT‑I 的平均改善程度，比對照組**大約多出 0.61 個標準差**
+
+***
+
+## 六、95% 信賴區間怎麼來？（概念）
+
+Meta-analysis 中：
+
+$$
+95\% \; CI = g \pm 1.96 \times SE(g)
+$$
+
+其中：
+
+*   $$SE(g)$$：效果大小的標準誤
+*   由各研究的樣本數與變異推算
+
+👉 **只要 CI 不跨 0 = 統計顯著**
+
+***
+
+## 七、一句話總結（可直接寫在方法或簡報）
+
+> 標準化平均差（SMD, Hedges’ g）係以治療組與對照組之平均差除以合併標準差計算，用以消除不同量表造成的尺度差異。
+
+或超白話版：
+
+> SMD 就是「兩組差多少」，換算成「相對於一般個體差異有多大」。
+
+***
+
+## 八、如果你接下來要用在「論文 / 審稿應付」
+
+我可以直接幫你：
+
+*   ✅ 寫 **Methods：Effect size calculation** 段落
+*   ✅ 補 **Why Hedges’ g was used** 的一句
+*   ✅ 解釋 **為什麼 SMD 正負號方向長這樣**
+*   ✅ 幫你檢查 reviewer 可能會挑的點
+
+你只要說：  
+👉「我要 Methods 用語」或  
+👉「我要給 reviewer 看得通的版」
+
+
+</pre>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+<script>
+const md=document.getElementById('md').textContent;
+document.getElementById('content').innerHTML=`<div class="markdown-body">${marked.parse(md)}</div>`;
+renderMathInElement(document.getElementById('content'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\(',right:'\)',display:false},{left:'\[',right:'\]',display:true}],throwOnError:false});
+</script>
+</body>
+</html>

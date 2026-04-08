@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🔧 系統 Dashboard</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--c-bg, #0d1117); color: var(--c-text, #e6edf3); font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); min-height: 100vh; }
+
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 14px; }
+    .title { font-size: 18px; font-weight: 900; color:#fff; }
+    .btn { appearance:none; border:1px solid #30363d; background: rgba(255,255,255,0.04); color: var(--c-text); padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; text-decoration:none; }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 780px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    .card { background:#161b22; border:1px solid #30363d; border-radius: 14px; padding: 14px; }
+    .card h2 { font-size: 13px; font-weight: 900; color:#fff; margin-bottom: 8px; display:flex; align-items:center; gap:8px; }
+    .meta { font-size: 11px; color:#8b949e; margin-bottom: 10px; }
+    .kv { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { border:1px solid #30363d; border-radius: 999px; padding: 6px 10px; font-size: 12px; color:#c9d1d9; }
+    .pill strong { color:#fff; }
+
+    .list { margin-top: 10px; display:flex; flex-direction:column; gap:6px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 10px 10px; border:1px solid #21262d; border-radius: 12px; }
+    .row .l { min-width:0; }
+    .row .name { font-size: 13px; font-weight: 800; color:#e6edf3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .row .sub { font-size: 11px; color:#8b949e; margin-top: 3px; }
+    .row .r { font-size: 11px; color:#8b949e; white-space:nowrap; }
+
+    .hint { font-size: 11px; color:#8b949e; margin-top: 14px; line-height: 1.4; }
+    code { color:#c9d1d9; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="title">🔧 系統 Dashboard</div>
+    <a class="btn" id="close" href="/">✕ 關閉</a>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="cron-card">
+      <h2>⏰ 定時工作項目</h2>
+      <div class="meta">（沿用 Portal 首頁的定時工作項目樣式）</div>
+      <div class="list" id="scheduled-tasks">
+        <div style="padding:13px 16px; color:#8b949e; font-size:13px;">載入中...</div>
+      </div>
+    </div>
+
+    <div class="card" id="signals-card">
+      <h2>📡 Signals</h2>
+      <div class="meta" id="signals-meta">載入中…</div>
+      <div class="kv" id="signals-kv"></div>
+      <div class="list" id="signals-list"></div>
+    </div>
+
+    <div class="card" id="skills-card" style="grid-column: 1 / -1;">
+      <h2>🧩 Skills 狀態</h2>
+      <div class="meta" id="skills-meta">載入中…</div>
+      <div class="kv" id="skills-kv"></div>
+      <div class="list" id="skills-list"></div>
+    </div>
+  </div>
+
+  <div class="hint">提示：這頁只做「狀態總覽」。若要安裝 K-Dense skills，請到 <code>/claude-scientific-skills.html</code>。</div>
+
+<script>
+  const token = new URLSearchParams(location.search).get('token') || '';
+  const withToken = (url) => token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
+  document.getElementById('close').href = withToken('/');
+
+  async function apiFetch(url) {
+    const res = await fetch(withToken(url));
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function esc(s){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  }
+
+  function pill(label, value){
+    return `<div class="pill"><strong>${esc(label)}:</strong> ${esc(value)}</div>`;
+  }
+
+  async function loadScheduledTasks() {
+    const el = document.getElementById('scheduled-tasks');
+    if (!el) return;
+    try {
+      const data = await apiFetch('/api/scheduled-tasks');
+      if (!data.tasks || data.tasks.length === 0) {
+        el.innerHTML = '<div style="padding:13px 16px; color:#8b949e; font-size:13px;">目前沒有排程任務</div>';
+        return;
+      }
+      el.innerHTML = data.tasks.map(t => `
+        <div style="display:flex; align-items:center; padding:13px 16px; border-bottom:1px solid #21262d; gap:12px;">
+          <div class="le">${esc(t.icon || '⏰')}</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;">${esc(t.name || '')}</div>
+            <div style="font-size:11px; color:#8b949e; margin-top:2px;">${esc(t.schedule || '')}</div>
+          </div>
+          <div style="font-size:11px; padding:3px 8px; border-radius:6px; background:${esc(t.statusColor || '#30363d')}; color:#fff;">${esc(t.status || '')}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      el.innerHTML = '<div style="padding:13px 16px; color:#f85149; font-size:13px;">載入失敗</div>';
+    }
+  }
+
+  async function loadSignals(){
+    const meta = document.getElementById('signals-meta');
+    const kv = document.getElementById('signals-kv');
+    const list = document.getElementById('signals-list');
+    try {
+      const s = await apiFetch('/api/signals');
+      const comp = s.competition || [];
+      const long = s.longterm || [];
+      meta.textContent = `competition ${comp.length}｜longterm ${long.length}`;
+      kv.innerHTML = pill('updatedAt', s.updatedAt || '');
+      const top = [...comp.slice(0,3), ...long.slice(0,3)];
+      list.innerHTML = top.map(x => `
+        <div class="row">
+          <div class="l">
+            <div class="name">${esc(x.symbol || x.ticker || x.name || 'item')}</div>
+            <div class="sub">${esc(x.note || x.strategy || '')}</div>
+          </div>
+          <div class="r">${esc(x.side || '')}</div>
+        </div>
+      `).join('') || '<div class="meta">（無 signals）</div>';
+    } catch(e){
+      meta.textContent = '載入失敗';
+      kv.innerHTML = '';
+      list.innerHTML = `<div class="meta">${esc(e.message)}</div>`;
+    }
+  }
+
+  async function loadSkills(){
+    const meta = document.getElementById('skills-meta');
+    const kv = document.getElementById('skills-kv');
+    const list = document.getElementById('skills-list');
+
+    try {
+      const [kd, ws] = await Promise.all([
+        apiFetch('/api/kdense/skills'),
+        apiFetch('/api/workspace/list?path=skills')
+      ]);
+
+      const kdAll = kd.skills || [];
+      const kdInstalledSet = new Set(kdAll.filter(s => s.installed).map(s => s.id));
+      const kdInstalled = kdInstalledSet.size;
+
+      const wsDirs = (ws.list || []).filter(x => x.isDirectory).map(x => x.name);
+      const totalInstalled = wsDirs.length;
+      const otherInstalled = Math.max(0, totalInstalled - kdInstalled);
+
+      meta.textContent = `已安裝 Skills：${totalInstalled}（K-Dense ${kdInstalled}｜其他 ${otherInstalled}）`;
+      kv.innerHTML =
+        pill('總安裝', String(totalInstalled)) +
+        pill('K-Dense', String(kdInstalled)) +
+        pill('其他', String(otherInstalled));
+
+      // show first 24 (alphabetical) with marker whether from K-Dense
+      wsDirs.sort((a,b) => a.localeCompare(b));
+      const shown = wsDirs.slice(0, 24);
+      list.innerHTML = shown.map(id => {
+        const isKd = kdInstalledSet.has(id);
+        const tag = isKd ? '🧪' : '🧩';
+        return `
+          <div class="row">
+            <div class="l">
+              <div class="name">✅ ${esc(id)}</div>
+              <div class="sub">${tag} ${esc(isKd ? 'K-Dense' : 'Other')}</div>
+            </div>
+            <div class="r">installed</div>
+          </div>
+        `;
+      }).join('') || '<div class="meta">（尚未安裝任何 skills）</div>';
+
+    } catch(e){
+      meta.textContent = '載入失敗';
+      kv.innerHTML = '';
+      list.innerHTML = `<div class="meta">${esc(e.message)}</div>`;
+    }
+  }
+
+  loadScheduledTasks();
+  setInterval(loadScheduledTasks, 60000);
+  loadSignals();
+  loadSkills();
+</script>
+</body>
+</html>

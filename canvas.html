@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎨 靈狐白板</title>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        body { 
+            background: #1a1a2e; 
+            color: #fff; 
+            font-family: var(--font-sans);
+            margin: 0; 
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .toolbar {
+            background: #16213e;
+            padding: 10px 16px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #0f3460;
+        }
+        .toolbar button {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toolbar button:hover { background: #e94560; }
+        .toolbar button.active { background: #e94560; }
+        
+        .color-picker {
+            display: flex;
+            gap: 6px;
+        }
+        .color-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .color-btn.active { border-color: #fff; }
+        
+        .size-picker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .size-picker input {
+            width: 60px;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        #whiteboard {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        
+        .status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .status.show { opacity: 1; }
+        
+        .clear-btn { background: #e94560 !important; }
+        .save-btn { background: #4ecca3 !important; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="setTool('pen')" class="active" id="penBtn">✏️ 畫筆</button>
+        <button onclick="setTool('eraser')" id="eraserBtn">🧹 橡皮擦</button>
+        
+        <div class="color-picker">
+            <div class="color-btn active" style="background:#fff" onclick="setColor('#fff')"></div>
+            <div class="color-btn" style="background:#e94560" onclick="setColor('#e94560')"></div>
+            <div class="color-btn" style="background:#4ecca3" onclick="setColor('#4ecca3')"></div>
+            <div class="color-btn" style="background:#f39c12" onclick="setColor('#f39c12')"></div>
+            <div class="color-btn" style="background:#3498db" onclick="setColor('#3498db')"></div>
+            <div class="color-btn" style="background:#9b59b6" onclick="setColor('#9b59b6')"></div>
+        </div>
+        
+        <div class="size-picker">
+            <span>粗細：</span>
+            <input type="range" min="1" max="30" value="5" id="sizeSlider" oninput="setSize(this.value)">
+            <span id="sizeValue">5px</span>
+        </div>
+        
+        <button class="clear-btn" onclick="clearCanvas()">🗑️ 清除</button>
+        <button class="save-btn" onclick="saveCanvas()">💾 儲存</button>
+    </div>
+    
+    <div id="canvas-container">
+        <canvas id="whiteboard"></canvas>
+    </div>
+    
+    <div class="status" id="status"></div>
+
+    <script>
+        const canvas = document.getElementById('whiteboard');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        
+        let isDrawing = false;
+        let tool = 'pen';
+        let color = '#fff';
+        let size = 5;
+        let lastX = 0;
+        let lastY = 0;
+        
+        // 初始化畫布大小
+        function resizeCanvas() {
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 繪畫事件
+        function startDraw(e) {
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            
+            const pos = getPos(e);
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            
+            if (tool === 'eraser') {
+                ctx.strokeStyle = '#1a1a2e';
+                ctx.lineWidth = size * 3;
+            } else {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = size;
+            }
+            
+            ctx.stroke();
+            
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+        
+        function stopDraw() {
+            isDrawing = false;
+        }
+        
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            if (e.touches) {
+                return {
+                    x: e.touches[0].clientX - rect.left,
+                    y: e.touches[0].clientY - rect.top
+                };
+            }
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+        
+        // 事件監聽
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseout', stopDraw);
+        
+        canvas.addEventListener('touchstart', startDraw);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDraw);
+        
+        // 工具選擇
+        function setTool(t) {
+            tool = t;
+            document.getElementById('penBtn').classList.toggle('active', t === 'pen');
+            document.getElementById('eraserBtn').classList.toggle('active', t === 'eraser');
+        }
+        
+        function setColor(c) {
+            color = c;
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.style.background.includes(c.replace('#','')) || (c === '#fff' && btn.style.background === 'rgb(255, 255, 255)'));
+            });
+        }
+        
+        function setSize(s) {
+            size = parseInt(s);
+            document.getElementById('sizeValue').textContent = s + 'px';
+        }
+        
+        function clearCanvas() {
+            if (confirm('確定要清除畫布嗎？')) {
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        // Save to server
+        function saveCanvasToServer() {
+            return new Promise((resolve, reject) => {
+                const dataURL = canvas.toDataURL('image/png');
+                fetch('/api/canvas/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        image: dataURL,
+                        timestamp: Date.now()
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.ok) {
+                        showStatus('✅ 已儲存到伺服器');
+                        resolve(data);
+                    } else {
+                        showStatus('❌ 儲存失敗: ' + data.error);
+                        reject(new Error(data.error));
+                    }
+                })
+                .catch(err => {
+                    showStatus('❌ 儲存失敗');
+                    reject(err);
+                });
+            });
+        }
+        
+        function loadCanvasFromServer() {
+            fetch('/api/canvas/load?token=T628_TYLER_SAFE_ACCESS')
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.image) {
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0);
+                        showStatus('📋 已載入上次的畫作');
+                    };
+                    img.src = data.image;
+                }
+            })
+            .catch(() => {});
+        }
+        
+        // Load on startup
+        loadCanvasFromServer();
+        
+        function showStatus(msg) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.classList.add('show');
+            setTimeout(() => status.classList.remove('show'), 2000);
+        }
+    </script>
+</body>
+</html>

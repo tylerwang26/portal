@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🦊 Portal</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+    <script defer src="/vendor/katex/katex.min.js"></script>
+    <script defer src="/vendor/katex/contrib/auto-render.min.js"></script>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; padding: var(--space-4); padding-top: calc(var(--space-4) + var(--safe-t)); }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+        .header h1 { font-size: 18px; margin: 0; color: var(--c-accent); }
+        .breadcrumb { font-size: 13px; color: var(--c-muted); margin-bottom: var(--space-4); white-space: nowrap; overflow-x: auto; padding-bottom: 5px; }
+        .breadcrumb span { cursor: pointer; text-decoration: underline; }
+        /* Slash separator uses accent color to match viewer H1; no surrounding whitespace */
+        .breadcrumb .sep { color: var(--c-accent); padding: 0; margin: 0; }
+
+        .file-list { background: var(--c-surface); border-radius: var(--r-lg); border: var(--bd-1); overflow: hidden; min-height: 60vh; }
+        .file-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: default; user-select: none; touch-action: pan-y; }
+        .file-item:last-child { border: none; }
+        .file-item:active { background: rgba(255,255,255,0.05); }
+        .file-item.opened { background: rgba(63,185,80,0.10); }
+        .file-item.drop-target { outline: 2px solid rgba(88,166,255,0.55); outline-offset: -2px; background: rgba(88,166,255,0.10); }
+        .icon { font-size: 20px; margin-right: 14px; width: 24px; text-align: center; }
+        .name { flex: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .right { display:flex; align-items:center; gap:10px; margin-left: 10px; }
+        .fav-dot { font-size: 16px; opacity: 0.9; }
+        .fav-btn { border: none; background: transparent; color: var(--c-text); font-size: 16px; padding: 2px 4px; cursor: pointer; opacity: 0.95; }
+        .delete-btn { display:none; border: 1px solid rgba(248,81,73,0.55); background: rgba(248,81,73,0.12); color: var(--c-text); padding: 6px 10px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+        .file-item.show-delete .delete-btn { display:inline-flex; }
+
+        
+        /* Modal for Viewing */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--c-bg); z-index: 1000; display: none; flex-direction: column; }
+        .modal.active { display: flex; }
+        .modal-header { padding: var(--space-4); border-bottom: var(--bd-1); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; overflow: auto; padding: var(--space-4); }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: var(--c-accent); margin-top: 1.2em; }
+        .markdown-body a { color: var(--c-accent); text-decoration: underline; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+        .markdown-body th, .markdown-body td { border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; }
+        .markdown-body code { background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        .markdown-body pre { background: #1e1e1e; padding: 16px; border-radius: 8px; overflow-x: auto; }
+        .text-view { width: 100%; height: 100%; border: none; background: transparent; color: var(--c-text); font-family: monospace; font-size: 13px; white-space: pre-wrap; resize: none; }
+        .img-view { max-width: 100%; height: auto; }
+        .btn { appearance: none; border: var(--bd-1); background: rgba(255,255,255,0.04); color: var(--c-text); padding: 6px 12px; border-radius: 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 style="cursor:pointer;" title="回到 /home/node/.openclaw/workspace/obsidian_vault" onclick="loadDir('obsidian_vault')">檔案管理 📂</h1>
+        <div style="display:flex; gap:4px; align-items:center;">
+            <button class="btn" id="search-btn" onclick="window.location.href='/memory-search'" title="找之前的筆記" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:inherit;"><img src="/assets/icons/magnifying-glass.png" style="width:22px;height:22px;" alt="找之前的筆記"></button>
+            <button class="btn" id="upload-btn" title="上傳到此資料夾" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center;"><img src="/assets/icons/add-document.png" style="width:22px;height:22px;" alt="上傳到此資料夾"></button>
+            <button class="btn" id="mkdir-btn" title="新增資料夾" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; padding:4px;">
+                <img src="/assets/icons/new-folder.png" style="width:20px;height:20px;" alt="新增資料夾">
+            </button>
+            <button class="btn" id="newnote-btn" title="新增 Markdown" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center;"><img src="/assets/icons/letter.png" style="width:22px;height:22px;" alt="新增 Markdown"></button>
+            <button class="btn" id="sort-btn" title="排序" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center;">↕️</button>
+            <button class="btn" id="close-btn" onclick="window.location.href='/'" title="回首頁" style="min-width:30px; min-height:30px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:inherit;"><img src="/assets/icons/house.png" style="width:22px;height:22px;" alt="回首頁"></button>
+        </div>
+    </div>
+    
+
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="file-list" id="file-list"></div>
+    <input type="file" id="uploadInput" multiple style="display:none" />
+
+    <!-- New note modal (replaces native prompt to avoid browser "禁止顯示對話方塊") -->
+    <div id="newnote-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:2000;">
+        <div style="width:320px; background:var(--c-surface); border:var(--bd-1); padding:16px; border-radius:12px;">
+            <div style="font-weight:800; margin-bottom:8px;">新增 Markdown 檔案</div>
+            <input id="newnote-input" placeholder="檔名（可不含 .md）" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--c-text);" />
+            <div id="newnote-err" style="color:#f85149; font-size:13px; min-height:18px; margin-top:8px;"></div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                <button class="btn" id="newnote-cancel">取消</button>
+                <button class="btn primary" id="newnote-create">建立</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-header">
+            <span id="modal-filename" style="font-size:14px; font-weight:bold; flex:1;"></span>
+            <button class="btn" id="fav-btn" onclick="toggleFavorite()" style="margin-right:8px; font-size:16px; min-width:40px;">☆</button>
+            <button class="btn" onclick="closeModal()">✕ 關閉</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+    </div>
+
+    <script src="/assets/tg_auth.js"></script>
+    <script>
+        const webApp = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        try { webApp && webApp.expand(); } catch (e) {}
+        try { webApp && webApp.ready(); } catch (e) {}
+
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+        const initData = (window.portalAuth ? window.portalAuth.getInitData() : (webApp ? webApp.initData : ''));
+        let currentPath = '';
+        let currentSort = localStorage.getItem('portal:sort') || 'mtime'; // default: modification time
+        // Set initial button icon (use images)
+        const sortIcons = { mtime: '/assets/icons/sort-descending.png', name: '/assets/icons/Sort-alphabetical.png' };
+        const sortBtn = document.getElementById('sort-btn');
+        if (sortBtn) sortBtn.innerHTML = `<img src="${sortIcons[currentSort] || sortIcons.mtime}" style="width:22px;height:22px;" alt="排序">`;
+        
+        // Sort button cycles through: mtime → name → mtime
+        if (sortBtn) {
+            sortBtn.addEventListener('click', () => {
+                const modes = ['mtime', 'name'];
+                const currentIdx = modes.indexOf(currentSort);
+                const nextIdx = (currentIdx + 1) % modes.length;
+                setSort(modes[nextIdx]);
+            });
+        }
+        
+        function setSort(mode) {
+            currentSort = mode;
+            localStorage.setItem('portal:sort', mode);
+            // Update button icon only (use image)
+            try {
+                const src = sortIcons[mode] || sortIcons.mtime;
+                if (sortBtn) sortBtn.innerHTML = `<img src="${src}" style="width:22px;height:22px;" alt="排序">`;
+            } catch(e) { if (sortBtn) sortBtn.textContent = (mode === 'name' ? '🔠' : '⬇️'); }
+            loadDir(currentPath);
+        }
+        let currentOpenFile = '';
+
+        // Ensure header close keeps token
+        (function initHeaderLinks(){
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || '';
+
+            const closeBtn = document.getElementById('close-btn');
+            if (closeBtn) closeBtn.href = token ? `/?token=${token}` : '/';
+
+            const searchBtn = document.getElementById('search-btn');
+            if (searchBtn) searchBtn.href = token ? `/memory-search?token=${token}` : '/memory-search';
+        })();
+
+        // --- Favorites (☆/⭐️) ---
+        async function checkIfFavorite(filePath) {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                const res = await fetch(`/api/favorites?token=${token}&_t=${Date.now()}`, {
+                    headers: { 'X-TG-INITDATA': initData }
+                });
+                const favs = await res.json();
+                const isFav = (favs || []).some(f => f.path === filePath);
+                document.getElementById('fav-btn').textContent = isFav ? '⭐️' : '☆';
+            } catch(e) {}
+        }
+
+        async function toggleFavorite() {
+            if (!currentOpenFile) return;
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                const res = await fetch(`/api/favorites/toggle?token=${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                    body: JSON.stringify({ path: currentOpenFile, name: currentOpenFile.split('/').pop() })
+                });
+                const data = await res.json();
+                document.getElementById('fav-btn').textContent = data.favorited ? '⭐️' : '☆';
+            } catch(e) { console.error('Toggle fav error:', e); }
+        }
+
+        function getTokenParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token') || '';
+        }
+
+        function safeBaseUrl() {
+            const href = String(window.location.href || '');
+            const m = href.match(/^https?:\/\/[^\/]+/i);
+            return m ? m[0] : '';
+        }
+
+        function buildApiUrl(pathname, params = {}) {
+            const token = getTokenParam();
+            const q = new URLSearchParams();
+            if (token) q.set('token', token);
+            for (const [k, v] of Object.entries(params)) {
+                if (v === undefined || v === null) continue;
+                q.set(k, String(v));
+            }
+            q.set('_t', Date.now().toString());
+
+            const base = safeBaseUrl();
+            const prefix = base ? base : '';
+            const sep = pathname.includes('?') ? '&' : '?';
+            return `${prefix}${pathname}${sep}${q.toString()}`;
+        }
+
+        function wireHeaderActions() {
+            const uploadBtn = document.getElementById('upload-btn');
+            const mkdirBtn = document.getElementById('mkdir-btn');
+            const newNoteBtn = document.getElementById('newnote-btn');
+            const input = document.getElementById('uploadInput');
+
+            if (uploadBtn && input) {
+                uploadBtn.addEventListener('click', () => input.click());
+                input.addEventListener('change', async () => {
+                    if (!input.files || !input.files.length) return;
+                    try {
+                        const fd = new FormData();
+                        Array.from(input.files).forEach(f => fd.append('files', f));
+                        const url = buildApiUrl('/api/workspace/upload', { path: currentPath });
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'X-TG-INITDATA': initData },
+                            body: fd
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                        input.value = '';
+                        await loadDir(currentPath);
+                    } catch (e) {
+                        alert('上傳失敗：' + (e?.message || String(e)));
+                    }
+                });
+            }
+
+            if (mkdirBtn) {
+                mkdirBtn.addEventListener('click', async () => {
+                    const name = prompt('新增資料夾名稱：');
+                    if (!name) return;
+                    try {
+                        const url = buildApiUrl('/api/workspace/mkdir');
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                            body: JSON.stringify({ path: currentPath, name })
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                        await loadDir(currentPath);
+                    } catch (e) {
+                        alert('建立資料夾失敗：' + (e?.message || String(e)));
+                    }
+                });
+            }
+
+            if (newNoteBtn) {
+                newNoteBtn.addEventListener('click', async () => {
+                    // open custom modal to avoid browser prompt (and its "禁止顯示對話方塊")
+                    const modal = document.getElementById('newnote-modal');
+                    const input = document.getElementById('newnote-input');
+                    const err = document.getElementById('newnote-err');
+                    if (!modal || !input) return;
+                    input.value = '';
+                    err.textContent = '';
+                    modal.style.display = 'flex';
+                    setTimeout(() => input.focus(), 50);
+                });
+
+                // Modal actions wired below (created in DOM)
+            }
+
+        }
+        wireHeaderActions();
+
+        // New note modal wiring
+        (function wireNewNoteModal(){
+            const modal = document.getElementById('newnote-modal');
+            const input = document.getElementById('newnote-input');
+            const btnCancel = document.getElementById('newnote-cancel');
+            const btnCreate = document.getElementById('newnote-create');
+            const err = document.getElementById('newnote-err');
+            if (!modal) return;
+            if (btnCancel) btnCancel.addEventListener('click', () => { modal.style.display = 'none'; });
+            if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+            if (btnCreate) btnCreate.addEventListener('click', async () => {
+                if (!input) return;
+                let name = (input.value || '').trim();
+                if (!name) { if (err) err.textContent = '請輸入檔名'; return; }
+                if (!name.toLowerCase().endsWith('.md')) name = name + '.md';
+                const base = (currentPath || '').replace(/\/+$/, '');
+                const normalized = (base ? (base + '/' + name) : name).replace(/^\//, '');
+                const content = '<!-- FontSize: 18px -->\n# ' + name.replace(/\.md$/i, '') + '\n\n';
+                try {
+                    const url = buildApiUrl('/api/workspace/save');
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                        body: JSON.stringify({ path: normalized, content })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                    modal.style.display = 'none';
+                    await loadDir(currentPath);
+                    window.location.href = `/note?path=${encodeURIComponent(normalized)}`;
+                } catch (e) {
+                    if (err) err.textContent = '建立失敗：' + (e?.message || String(e));
+                }
+            });
+        })();
+
+        async function apiFetch(url) {
+            const res = await fetch(buildApiUrl(url), {
+                credentials: 'include',
+                headers: { 'X-TG-INITDATA': initData }
+            });
+            if (res.status === 403) {
+                document.body.innerHTML = '<div style="padding:40px; text-align:center;">❌ 權限不足<br>此介面僅限 Tyler 使用。</div>';
+                throw new Error('Forbidden');
+            }
+            return res.json();
+        }
+
+        async function loadDir(path = '') {
+            if (path !== currentPath) {
+                const url = new URL(window.location);
+                url.searchParams.set('path', path);
+                window.history.pushState({}, '', url);
+            }
+            currentPath = path;
+            renderBreadcrumb(path);
+            const listEl = document.getElementById('file-list');
+            listEl.innerHTML = '<div style="padding:20px; opacity:0.5;">載入中...</div>';
+            
+            try {
+                const data = await apiFetch(`/api/workspace/list?path=${encodeURIComponent(path)}`);
+                listEl.innerHTML = '';
+
+                // Sort: Directories first (always), then by selected mode
+                const sorted = data.list.sort((a, b) => {
+                    // Always keep directories on top
+                    if (a.isDirectory && !b.isDirectory) return -1;
+                    if (!a.isDirectory && b.isDirectory) return 1;
+                    
+                    // Within same type (dirs or files), sort by selected mode
+                    if (currentSort === 'name') {
+                        return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+                    } else if (currentSort === 'ctime') {
+                        // coerce to numeric timestamps to avoid string/lexicographic ordering
+                        const aTime = Number(a.ctime) || Date.parse(a.ctime) || 0;
+                        const bTime = Number(b.ctime) || Date.parse(b.ctime) || 0;
+                        return bTime - aTime; // newest first
+                    } else { // mtime (default)
+                        const aTime = Number(a.mtime) || Date.parse(a.mtime) || 0;
+                        const bTime = Number(b.mtime) || Date.parse(b.mtime) || 0;
+                        return bTime - aTime; // newest first
+                    }
+                });
+                if (!sorted.length) {
+                    listEl.innerHTML = '<div style="padding:20px; opacity:0.6;">空資料夾（可拖曳檔案到此處）</div>';
+                }
+                
+                // Favorites set
+                let favSet = new Set();
+                try {
+                    const favsResp = await apiFetch(`/api/favorites`);
+                    const favs = Array.isArray(favsResp) ? favsResp : (Array.isArray(favsResp?.favorites) ? favsResp.favorites : []);
+                    favs.forEach(f => {
+                        if (!f) return;
+                        if (typeof f === 'string') return favSet.add(f);
+                        if (typeof f.path === 'string') return favSet.add(f.path);
+                    });
+                } catch(e) {
+                    console.warn('favorites fetch failed:', e);
+                }
+
+                const lastOpened = localStorage.getItem('portal:lastOpenedFile') || '';
+                const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+                // Init drag/drop on empty area (move into current directory)
+                if (!isTouchDevice && !listEl.dataset.dndInit) {
+                    listEl.dataset.dndInit = '1';
+                    listEl.addEventListener('dragover', (e) => { e.preventDefault(); });
+                    listEl.addEventListener('drop', async (e) => {
+                        e.preventDefault();
+                        const from = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || '';
+                        if (!from) return;
+                        await movePath(from, currentPath || '');
+                    });
+                }
+
+                // helpers
+                async function copyText(text) {
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(text);
+                            return true;
+                        }
+                    } catch (e) {}
+                    // Fallback
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        const ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        return ok;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+
+                async function deletePath(filePath, btnEl) {
+                    // Single-tap delete (Tyler preference). No green-check confirmation UX.
+                    try {
+                        const res = await fetch(buildApiUrl('/api/workspace/delete'), {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                            body: JSON.stringify({ path: filePath })
+                        });
+                        const text = await res.text();
+                        let data = {};
+                        try { data = JSON.parse(text); } catch { data = { ok: false, error: text.slice(0, 120) }; }
+                        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                        await loadDir(currentPath);
+                    } catch(e) {
+                        alert('刪除失敗：' + e.message);
+                    }
+                }
+
+                async function movePath(fromPath, toDir) {
+                    if (!fromPath || !toDir) return;
+                    if (fromPath === toDir) return;
+                    try {
+                        const u = buildApiUrl('/api/workspace/move');
+                        const url = u + (u.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            credentials: 'include',
+                            cache: 'no-store',
+                            headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                            body: JSON.stringify({ from: fromPath, toDir })
+                        });
+                        const text = await res.text();
+                        let data = {};
+                        try { data = JSON.parse(text); } catch { data = { ok: false, error: text.slice(0, 120) }; }
+                        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+                        try {
+                            const listEl = document.getElementById('file-list');
+                            if (listEl) listEl.innerHTML = '<div style="padding:20px; opacity:0.5;">刷新中...</div>';
+                        } catch {}
+                        await loadDir(currentPath);
+                    } catch (e) {
+                        alert('移動失敗：' + (e?.message || String(e)));
+                    }
+                }
+
+                sorted.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.dataset.path = item.path;
+                    if (item.path === lastOpened) div.classList.add('opened');
+
+                    const isFav = favSet.has(item.path);
+                    const favMark = isFav ? '⭐️' : '☆';
+                    div.innerHTML = `
+                        <span class="icon">${item.isDirectory ? '📁' : getIcon(item.name)}</span>
+                        <span class="name">${item.name}</span>
+                        <span class="right">
+                            <button class="fav-btn" title="收藏/取消收藏">${favMark}</button>
+                            <button class="delete-btn" title="刪除">🗑</button>
+                        </span>
+                    `;
+
+                    // Desktop drag & drop move (drop onto folders)
+                    if (!isTouchDevice) {
+                        div.draggable = true;
+                        div.addEventListener('dragstart', (e) => {
+                            try {
+                                e.dataTransfer.setData('text/plain', item.path);
+                                e.dataTransfer.effectAllowed = 'move';
+                            } catch {}
+                        });
+
+                        // Drop behavior:
+                        // - Drop onto a folder → move into that folder
+                        // - Drop onto a file (non-folder) → move into the current directory
+                        div.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            if (item.isDirectory) div.classList.add('drop-target');
+                            try { e.dataTransfer.dropEffect = 'move'; } catch {}
+                        });
+                        div.addEventListener('dragleave', () => div.classList.remove('drop-target'));
+                        div.addEventListener('drop', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            div.classList.remove('drop-target');
+                            const from = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || '';
+                            if (!from) return;
+                            const dest = item.isDirectory ? item.path : (currentPath || '');
+                            if (from === dest) return;
+                            await movePath(from, dest);
+                        });
+                    }
+
+                    // delete button
+                    div.querySelector('.delete-btn').onclick = (e) => {
+                        e.stopPropagation();
+                        deletePath(item.path, e.currentTarget);
+                    };
+
+                    // favorite toggle (click star)
+                    const favBtn = div.querySelector('.fav-btn');
+                    if (favBtn) {
+                        favBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            try {
+                                const res = await fetch(buildApiUrl('/api/favorites/toggle'), {
+                                    method: 'POST',
+                                    credentials: 'include',
+                                    headers: { 'Content-Type': 'application/json', 'X-TG-INITDATA': initData },
+                                    body: JSON.stringify({ path: item.path, name: item.name })
+                                });
+                                const data = await res.json();
+                                favBtn.textContent = data.favorited ? '⭐️' : '☆';
+                                if (data.favorited) favSet.add(item.path); else favSet.delete(item.path);
+                                try { localStorage.setItem('portal:favoritesChanged', String(Date.now())); } catch (e) {}
+                            } catch (err) {
+                                alert('收藏操作失敗：' + (err?.message || String(err)));
+                            }
+                        };
+                    }
+
+                    function markOpened() {
+                        document.querySelectorAll('.file-item.opened').forEach(el => el.classList.remove('opened'));
+                        document.querySelectorAll('.file-item.show-delete').forEach(el => el.classList.remove('show-delete'));
+                        div.classList.add('opened');
+                        localStorage.setItem('portal:lastOpenedFile', item.path);
+                    }
+
+                    function openItem() {
+                        markOpened();
+                        if (item.isDirectory) {
+                            loadDir(item.path);
+                            return;
+                        }
+                        const ext = item.name.split('.').pop().toLowerCase();
+                        const token = getTokenParam();
+                        const viewerUrl = `/viewer?path=${encodeURIComponent(item.path)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                        const officeExts = ['doc','docx','ppt','pptx','xls','xlsx'];
+                        if (ext === 'pdf' || ext === 'md' || officeExts.includes(ext)) window.open(viewerUrl, '_blank');
+                        else openFile(item.path);
+                    }
+
+                    const nameEl = div.querySelector('.name');
+
+                    // Click-to-open only on filename
+                    nameEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // For audio files, single-click should only select (per Tyler):
+                        const audioExts = ['mp3','wav','m4a','ogg'];
+                        const ext = (item.name || '').split('.').pop().toLowerCase();
+                        if (audioExts.includes(ext)) {
+                            // just mark selected/opened, do not open modal
+                            markOpened();
+                            return;
+                        }
+                        openItem();
+                    });
+
+                    // Desktop right-click delete only on filename
+                    nameEl.addEventListener('contextmenu', (e) => {
+                        if (isTouchDevice) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        div.classList.add('show-delete');
+                    });
+
+                    // swipe gestures only on filename
+                    let startX = null;
+                    let startY = null;
+                    nameEl.addEventListener('touchstart', (e) => {
+                        const t = e.touches[0];
+                        startX = t.clientX;
+                        startY = t.clientY;
+                    }, { passive: true });
+                    nameEl.addEventListener('touchend', (e) => {
+                        if (startX === null) return;
+                        const t = e.changedTouches[0];
+                        const dx = t.clientX - startX;
+                        const dy = t.clientY - startY;
+                        startX = null; startY = null;
+                        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+
+                        // hide delete on all
+                        document.querySelectorAll('.file-item.show-delete').forEach(el => {
+                            if (el !== div) el.classList.remove('show-delete');
+                        });
+
+                        if (dx < 0) {
+                            // swipe left: reveal delete button (no immediate delete)
+                            div.classList.add('show-delete');
+                        } else {
+                            // swipe right: toggle favorite (☆/⭐️)
+                            div.classList.remove('show-delete');
+                            try { favBtn?.click(); } catch (e) {}
+                        }
+                    }, { passive: true });
+
+                    listEl.appendChild(div);
+                });
+            } catch(e) {
+                listEl.innerHTML = '<div style="padding:20px; color:var(--c-danger);">載入失敗</div>';
+            }
+        }
+
+        function getIcon(name) {
+            const ext = name.split('.').pop().toLowerCase();
+            if (ext === 'pdf') return '📕';
+            if (['png','jpg','jpeg','gif','svg'].includes(ext)) return '🖼️';
+            if (['js','mjs','json','py','sh'].includes(ext)) return '📜';
+            if (['md','txt'].includes(ext)) return '📝';
+            return '📄';
+        }
+
+        function renderBreadcrumb(path) {
+            const bc = document.getElementById('breadcrumb');
+            // show base path and make slashes use accent color via .sep
+            // Build base path (displayed, clickable to root). Render slashes with .sep but avoid trailing sep before the user path to prevent double //
+            const baseParts = ['home','node','.openclaw','workspace'];
+            let html = '';
+            // leading slash before baseParts[0]
+            html += `<span class="sep">/</span>`;
+            // Render base as a single clickable region (click -> root '') but still color slashes
+            baseParts.forEach((p, i) => {
+                html += `<span onclick="loadDir('')">${p}</span>`;
+                if (i < baseParts.length - 1) html += `<span class="sep">/</span>`; // no trailing sep after last base part
+            });
+
+            if (path) {
+                const parts = path.split('/').filter(Boolean);
+                let full = '';
+                parts.forEach((p) => {
+                    full += (full ? '/' : '') + p;
+                    const thisPath = full;
+                    // slash + clickable part
+                    html += `<span class="sep">/</span><span onclick="loadDir('${thisPath}')">${p}</span>`;
+                });
+            }
+            bc.innerHTML = html;
+        }
+
+        function renderMath(element) {
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(element, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError : false
+                });
+            } else {
+                setTimeout(() => renderMath(element), 100);
+            }
+        }
+
+        async function renderMermaid(element) {
+            const elements = element.querySelectorAll('.language-mermaid');
+            for (let i = 0; i < elements.length; i++) {
+                const item = elements[i];
+                const code = item.innerText;
+                const parent = item.parentElement;
+                const id = 'mermaid-exp-' + i;
+                try {
+                    const { render } = mermaid;
+                    const { svg } = await render(id, code);
+                    parent.outerHTML = `<div class="mermaid-container" style="display:flex; justify-content:center; margin: 20px 0;">${svg}</div>`;
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        async function openFile(path) {
+            currentOpenFile = path;
+            const modal = document.getElementById('modal');
+            const body = document.getElementById('modal-body');
+            document.getElementById('modal-filename').innerText = path.split('/').pop();
+            checkIfFavorite(path);
+            
+            modal.classList.add('active');
+            body.innerHTML = '讀取中...';
+
+            const ext = path.split('.').pop().toLowerCase();
+            if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) {
+                body.innerHTML = `<img class="img-view" src="/api/workspace/raw?path=${encodeURIComponent(path)}&_t=${Date.now()}&initData=${encodeURIComponent(initData)}" />`;
+            } else {
+                try {
+                    const data = await apiFetch(`/api/workspace/view?path=${encodeURIComponent(path)}`);
+                    // Render as Markdown for text files
+                    body.innerHTML = `<div class="markdown-body" style="font-size:16px; line-height:1.6;">${marked.parse(data.content)}</div>`;
+                    // Attempt KaTeX auto-render; if some blocks remain unrendered, use explicit fallback renderer.
+                    renderMath(body);
+                    try { await renderMermaid(body); } catch(e) { console.warn('renderMermaid failed', e); }
+
+                    // Fallback: if KaTeX didn't render some $$...$$ display math, render them explicitly
+                    (function katexFallback(el){
+                        if (typeof katex === 'undefined' || typeof katex.renderToString !== 'function') return;
+                        try {
+                            const inner = el.querySelector('.markdown-body');
+                            if (!inner) return;
+                            // render display math $$...$$
+                            inner.innerHTML = inner.innerHTML.replace(/\$\$([\s\S]+?)\$\$/g, (m, tex) => {
+                                try {
+                                    return katex.renderToString(tex, { displayMode: true, throwOnError: false });
+                                } catch (e) { return m; }
+                            });
+                            // render inline math $...$ (avoid already-rendered \$)
+                            inner.innerHTML = inner.innerHTML.replace(/\$(?!\$)([^\$\n]+?)\$(?!\$)/g, (m, tex) => {
+                                try { return katex.renderToString(tex, { displayMode: false, throwOnError: false }); } catch (e) { return m; }
+                            });
+                        } catch (e) { console.warn('katexFallback error', e); }
+                    })(body);
+                } catch(e) {
+                    body.innerHTML = '讀取失敗';
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        window.addEventListener('popstate', () => {
+            const params = new URLSearchParams(window.location.search);
+            loadDir(params.get('path') || '');
+        });
+
+        function maybeRefresh() {
+            try {
+                // favorites changed?
+                const favTs = Number(localStorage.getItem('portal:favoritesChanged') || '0');
+                const lastFavTs = Number(localStorage.getItem('portal:lastFavSeen') || '0');
+                if (favTs && favTs > lastFavTs) {
+                    localStorage.setItem('portal:lastFavSeen', String(favTs));
+                    loadDir(currentPath || (new URLSearchParams(window.location.search).get('path') || ''));
+                    return;
+                }
+
+                // generic refresh flag (notes etc.)
+                const flag = localStorage.getItem('portal:needsRefresh');
+                if (flag !== '1') return;
+                localStorage.removeItem('portal:needsRefresh');
+                // refresh current directory
+                loadDir(currentPath || (new URLSearchParams(window.location.search).get('path') || ''));
+            } catch (e) {}
+        }
+
+        window.addEventListener('focus', maybeRefresh);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) maybeRefresh();
+        });
+        window.addEventListener('message', (ev) => {
+            if (!ev || !ev.data) return;
+            if (ev.data.type === 'portal-refresh') return maybeRefresh();
+            if (ev.data.type === 'favoritesChanged') {
+                try { localStorage.setItem('portal:favoritesChanged', String(ev.data.ts || Date.now())); } catch (e) {}
+                return maybeRefresh();
+            }
+        });
+
+        window.addEventListener('storage', (ev) => {
+            if (ev && ev.key === 'portal:favoritesChanged') maybeRefresh();
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        loadDir(urlParams.get('path') || '');
+    </script>
+    <!-- Inline audio player enhancer: find .name links to .mp3 and add player + share button -->
+    <script>
+        (function(){
+            function enhanceAttachments(){
+                document.querySelectorAll('.file-item .name').forEach(el=>{
+                    try{
+                        const text = el.textContent || '';
+                        if(!text.toLowerCase().endsWith('.mp3')) return;
+                        // already enhanced?
+                        if(el.dataset.enhanced) return;
+                        el.dataset.enhanced = '1';
+                        const parent = el.parentElement;
+                        const audio = document.createElement('audio');
+                        audio.controls = true;
+                        audio.style.marginLeft = '12px';
+                        audio.style.maxWidth = '320px';
+                        // build src from current path api
+                        const filePath = parent.dataset.path;
+                        audio.src = `/api/workspace/raw?path=${encodeURIComponent(filePath)}&_t=${Date.now()}`;
+                        const shareBtn = document.createElement('button');
+                        shareBtn.className='btn';
+                        shareBtn.textContent='Share';
+                        shareBtn.style.marginLeft='8px';
+                        shareBtn.onclick = async (e)=>{
+                            e.stopPropagation();
+                            const link = `${location.origin}/api/workspace/raw?path=${encodeURIComponent(filePath)}`;
+                            try{ await navigator.clipboard.writeText(link); alert('Download link copied to clipboard'); }
+                            catch(e){ prompt('Copy this link:', link); }
+                        };
+                        parent.appendChild(audio);
+                        parent.appendChild(shareBtn);
+                    }catch(e){}
+                });
+            }
+            // run initially and whenever file list changes
+            const observer = new MutationObserver(()=>{ enhanceAttachments(); });
+            observer.observe(document.getElementById('file-list'), { childList:true, subtree:true });
+            // initial run
+            setTimeout(enhanceAttachments, 800);
+        })();
+    </script>
+</body>
+</html>

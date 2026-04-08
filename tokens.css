@@ -1,52 +1,36 @@
 :root {
-  /* ===== Design Tokens (v0.1) ===== */
-  /* spacing scale (4px base) */
-  --space-0: 0px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-7: 32px;
-  --space-8: 40px;
+    --c-bg: #0f172a;
+    --c-text: #e2e8f0;
+    --c-muted: #94a3b8;
+    --c-surface: #1e293b;
+    --c-surface-2: #334155;
+    --c-accent: #38bdf8;
+    --c-success: #4ade80;
+    --c-danger: #f87171;
+    
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    
+    --fs-xs: 12px;
+    --fs-sm: 14px;
+    --fs-md: 16px;
+    --fs-lg: 18px;
+    --fs-xl: 24px;
+    
+    --r-xs: 4px;
+    --r-sm: 8px;
+    --r-lg: 12px;
+    
+    --bd-1: 1px solid rgba(255,255,255,0.1);
+    --bd-2: 1px solid rgba(255,255,255,0.15);
 
-  /* radius */
-  --r-xs: 6px;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-
-  /* typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-md: 14px;
-  --fs-lg: 16px;
-  --fs-xl: 20px;
-
-  /* colors (default dark) */
-  --c-bg: #0b0f14;
-  --c-surface: #161c24;
-  --c-surface-2: #1a212a;
-  --c-text: #e8edf2;
-  --c-muted: #919eab;
-  --c-accent: #00e5ff;
-  --c-danger: #ff4842;
-  --c-success: #54d62c;
-
-  /* borders */
-  --bd-1: 1px solid rgba(255, 255, 255, 0.06);
-  --bd-2: 1px solid rgba(255, 255, 255, 0.10);
-
-  /* safe area */
-  --safe-b: env(safe-area-inset-bottom, 0px);
-  --safe-t: env(safe-area-inset-top, 0px);
-}
-
-/* Telegram theme mapping (best-effort)
-   When inside Telegram WebApp, we overwrite these vars from themeParams via JS.
-*/
-:root[data-tg="1"] {
-  /* reserved for runtime overrides */
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
 }

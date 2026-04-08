@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>筆記</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; }
+    .top { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+           padding: 12px 14px; border-bottom: var(--bd-1); background: rgba(18,18,18,0.92); backdrop-filter: blur(10px); }
+    .title { font-size: 13px; font-weight: 700; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn { border: var(--bd-1); background: rgba(255,255,255,0.06); color: var(--c-text); padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+    .btn.primary { background: rgba(63,185,80,0.18); border: 1px solid rgba(63,185,80,0.45); }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+    textarea { width: 100%; min-height: calc(100vh - 170px); resize: vertical; background: #0b0f14; color: var(--c-text);
+               border: var(--bd-1); border-radius: 12px; padding: 12px; font-size: 16px; line-height: 1.55;
+               font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .status { margin-top: 10px; font-size: 13px; opacity: 0.8; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="title" id="title">筆記</div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn" id="viewBtn" title="預覽">👁</button>
+      <!-- Auto-save enabled; no manual save button -->
+      <button class="btn" id="closeBtn" title="關閉">✕</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <textarea id="text" placeholder="在這裡寫筆記...（儲存後會寫入 _Note.md）"></textarea>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    function getToken() {
+      const qs = new URLSearchParams(window.location.search);
+      return qs.get('token') || '';
+    }
+
+    function apiUrl(base, params = {}) {
+      const u = new URL(base, window.location.origin);
+      const token = getToken();
+      if (token) u.searchParams.set('token', token);
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === null) continue;
+        u.searchParams.set(k, v);
+      }
+      return u.toString();
+    }
+
+    const qs = new URLSearchParams(window.location.search);
+    const notePath = qs.get('path') || '';
+    const srcPath = qs.get('src') || '';
+
+    const title = document.getElementById('title');
+    const status = document.getElementById('status');
+    const textarea = document.getElementById('text');
+
+    title.textContent = notePath ? `筆記：${notePath}` : '筆記';
+
+    async function loadNote() {
+      if (!notePath) {
+        status.textContent = '❌ 缺少 path';
+        return;
+      }
+      status.textContent = '載入中...';
+      textarea.value = '';
+
+      const res = await fetch(apiUrl('/api/workspace/view', { path: notePath, _t: Date.now().toString() }), { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        textarea.value = data.content || '';
+        lastSaved = textarea.value || '';
+        status.textContent = `已載入既有筆記：${notePath}`;
+      } else {
+        lastSaved = textarea.value || '';
+        status.textContent = `尚無筆記檔，將建立新檔案：${notePath}`;
+      }
+    }
+
+    let lastSaved = '';
+    let saveTimer = null;
+    let saving = false;
+
+    function hhmmss() {
+      const now = new Date();
+      return now.toLocaleTimeString('en-US', { timeZone: 'Asia/Taipei', hour12: false });
+    }
+
+    async function saveNote(auto = true) {
+      if (!notePath) return;
+      if (saving) return;
+
+      const content = textarea.value || '';
+      if (content === lastSaved) {
+        if (auto) status.textContent = `已自動儲存（無變更） ${hhmmss()}`;
+        return;
+      }
+
+      saving = true;
+      status.textContent = auto ? '自動儲存中…' : '儲存中…';
+      try {
+        const res = await fetch(apiUrl('/api/workspace/save'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: notePath, content })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        lastSaved = content;
+        status.textContent = `✅ 已自動儲存 ${hhmmss()}`;
+        try {
+          localStorage.setItem('portal:needsRefresh', '1');
+          localStorage.setItem('portal:needsRefreshAt', String(Date.now()));
+          localStorage.setItem('portal:lastSavedNote', notePath);
+          if (window.opener) window.opener.postMessage({ type: 'portal-refresh', notePath }, '*');
+        } catch (e) {}
+      } catch (e) {
+        status.textContent = `❌ 自動儲存失敗：${e.message}`;
+      } finally {
+        saving = false;
+      }
+    }
+
+    function scheduleAutoSave() {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveNote(true), 900);
+    }
+
+    textarea.addEventListener('input', scheduleAutoSave);
+    document.getElementById('viewBtn').addEventListener('click', () => {
+      const t = getToken();
+      // Preview the note markdown itself (avoid viewer auto-redirect back to /note)
+      const url = `/viewer?path=${encodeURIComponent(notePath)}&notePreview=1${t ? `&token=${encodeURIComponent(t)}` : ''}`;
+      // Same tab
+      window.location.href = url;
+    });
+    document.getElementById('closeBtn').addEventListener('click', () => window.close());
+
+    // Convenience: show source file
+    if (srcPath) {
+      status.innerHTML = `來源檔案：<code>${srcPath}</code>`;
+    }
+
+    loadNote();
+  </script>
+</body>
+</html>

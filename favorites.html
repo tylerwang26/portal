@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>⭐️ 我的最愛</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; padding: var(--space-4); padding-top: calc(var(--space-4) + var(--safe-t)); }
+    .header { display:flex; align-items:center; justify-content:space-between; gap: 10px; margin-bottom: var(--space-4); }
+    .title { font-size: 18px; font-weight: 900; color: var(--c-accent); }
+    .right { display:flex; gap: 8px; align-items:center; }
+    .btn { border: var(--bd-1); background: rgba(255,255,255,0.06); color: var(--c-text); padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 900; cursor: pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .btn:active { transform: scale(0.99); }
+
+    .group { background: var(--c-surface); border: var(--bd-1); border-radius: var(--r-lg); overflow: hidden; margin-bottom: var(--space-3); }
+    .group-h { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; font-weight: 900; color: var(--c-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .item { display:flex; align-items:center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration:none; color: inherit; }
+    .item:last-child { border-bottom: none; }
+    .item:active { background: rgba(255,255,255,0.05); }
+    .icon { width: 24px; text-align:center; }
+    .name { flex: 1; font-weight: 800; font-size: 14px; }
+    .meta { font-family: var(--font-mono); font-size: 11px; color: var(--c-muted); }
+    .loading { opacity: 0.7; font-style: italic; color: var(--c-muted); font-size: 13px; padding: 12px 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">⭐️ 我的最愛</div>
+    <div class="right">
+      <button class="btn" id="sortBtn" onclick="reload()" title="依檔案夾分類 / 建檔時間新到舊">排序：資料夾→新到舊</button>
+      <a class="btn" id="homeBtn" href="/" title="回首頁"><img src="/assets/icons/house.png" style="width:18px;height:18px;" alt="回首頁"></a>
+    </div>
+  </div>
+
+  <div id="root"><div class="loading">載入中…</div></div>
+
+  <script>
+    function token() {
+      const p = new URLSearchParams(location.search);
+      return p.get('token') || '';
+    }
+
+    (function initHomeBtn(){
+      const t = token();
+      const a = document.getElementById('homeBtn');
+      a.href = t ? `/?token=${t}` : '/';
+    })();
+
+    function iconFor(name) {
+      const ext = (name || '').toLowerCase().split('.').pop();
+      if (ext === 'md') return '📝';
+      if (ext === 'pdf') return '📕';
+      if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'webp') return '🖼️';
+      if (ext === 'py') return '🐍';
+      if (ext === 'js' || ext === 'mjs') return '📜';
+      if (ext === 'json') return '📋';
+      return '📄';
+    }
+
+    function fmt(ms) {
+      if (!ms) return '';
+      try {
+        return new Date(ms).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
+      } catch { return ''; }
+    }
+
+    async function reload() {
+      const t = token();
+      const u = new URL('/api/favorites/details', location.origin);
+      if (t) u.searchParams.set('token', t);
+      const res = await fetch(u.toString());
+      const data = await res.json();
+
+      const root = document.getElementById('root');
+      if (!data.ok) {
+        root.innerHTML = `<div class="loading">載入失敗：${(data.error || 'unknown')}</div>`;
+        return;
+      }
+
+      if (!data.groups || !data.groups.length) {
+        root.innerHTML = `<div class="loading">目前沒有 ⭐️ 最愛</div>`;
+        return;
+      }
+
+      root.innerHTML = data.groups.map(g => {
+        const items = (g.items || []).map(it => {
+          const view = new URL('/viewer', location.origin);
+          view.searchParams.set('path', it.path);
+          if (t) view.searchParams.set('token', t);
+          return `
+            <a class="item" href="${view.toString()}">
+              <div class="icon">${iconFor(it.name)}</div>
+              <div class="name">${it.name}</div>
+              <div class="meta">${fmt(it.createdAtMs)}</div>
+            </a>
+          `;
+        }).join('');
+
+        return `
+          <div class="group">
+            <div class="group-h">${g.folder}</div>
+            ${items}
+          </div>
+        `;
+      }).join('');
+    }
+
+    reload();
+  </script>
+</body>
+</html>

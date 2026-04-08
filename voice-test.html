@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>語音測試</title>
+</head>
+<body>
+    <h1>語音指令測試頁面</h1>
+    <button id="testBtn" style="font-size:24px; padding:20px;">🎤 點我測試</button>
+    <div id="status" style="margin-top:20px; font-size:18px;"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function log(msg) {
+            console.log(msg);
+            statusDiv.innerHTML += msg + '<br>';
+        }
+        
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            log('按鈕被點擊了');
+            
+            // Check if APIs are available
+            if (!navigator.mediaDevices) {
+                log('❌ navigator.mediaDevices 不存在');
+                return;
+            }
+            log('✅ navigator.mediaDevices 存在');
+            
+            if (!navigator.mediaDevices.getUserMedia) {
+                log('❌ getUserMedia 不存在');
+                return;
+            }
+            log('✅ getUserMedia 存在');
+            
+            if (typeof MediaRecorder === 'undefined') {
+                log('❌ MediaRecorder 不存在');
+                return;
+            }
+            log('✅ MediaRecorder 存在');
+            
+            try {
+                log('正在請求麥克風權限...');
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                log('✅ 麥克風權限已獲得！');
+                log('音軌數量: ' + stream.getAudioTracks().length);
+                
+                // Stop stream
+                stream.getTracks().forEach(track => track.stop());
+                log('✅ 測試完成！');
+            } catch (err) {
+                log('❌ 錯誤: ' + err.name + ' - ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

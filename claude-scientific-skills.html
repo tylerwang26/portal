@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🧪 Claude Scientific Skills</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--c-bg, #0d1117); color: var(--c-text, #e6edf3); font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); min-height: 100vh; }
+
+    .hero { margin-bottom: 14px; }
+    .hero .h1 { font-size: 18px; font-weight: 800; color:#fff; }
+    .hero .sub { margin-top: 6px; font-size: 12px; color:#8b949e; line-height: 1.45; }
+
+    .list { background:#161b22; border:1px solid #30363d; border-radius:12px; overflow:hidden; }
+    .item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 14px 16px; border-bottom:1px solid #21262d; text-decoration:none; color:inherit; }
+    .item:last-child { border-bottom:none; }
+    .item:active { background: rgba(255,255,255,0.04); }
+
+    .left { display:flex; align-items:center; gap:12px; min-width: 0; }
+    .emoji { font-size: 20px; }
+    .title { font-size: 16px; font-weight: 800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .arrow { font-size: 12px; color:#8b949e; }
+
+    .pill { display:inline-block; font-size: 11px; color:#8b949e; border:1px solid #30363d; padding: 6px 10px; border-radius: 999px; margin-top: 10px; }
+
+    code { color:#c9d1d9; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="h1">🧪 Claude Scientific Skills（170+）</div>
+    <div class="sub">先選分類 → 下一頁再顯示可安裝的 skills 清單。點選 skill 列表可直接安裝到 <code>workspace/skills/</code>，並用 ✅/🔲 標示。</div>
+    <div class="pill" id="count">載入中…</div>
+  </div>
+
+  <div class="list" id="cats"></div>
+
+<script>
+  const qs = new URLSearchParams(location.search);
+  const token = qs.get('token') || '';
+  const initData = qs.get('initData') || '';
+
+  const withAuth = (url) => {
+    let u = url;
+    if (token) u = `${u}${u.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    if (initData) u = `${u}${u.includes('?') ? '&' : '?'}initData=${encodeURIComponent(initData)}`;
+    return u;
+  };
+
+  async function apiFetch(url) {
+    const extraHeaders = initData ? { 'X-TG-INITDATA': initData } : {};
+    const res = await fetch(withAuth(url), { credentials: 'include', headers: { ...extraHeaders } });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  const ORDER = [
+    { emoji:'🎓', name:'Research Methodology' },
+    { emoji:'⚙️', name:'Engineering & Simulation' },
+    { emoji:'📊', name:'Data Analysis & Visualization' },
+    { emoji:'🌍', name:'Geospatial Science & Remote Sensing' },
+    { emoji:'🤖', name:'Machine Learning & AI' },
+    { emoji:'🏥', name:'Clinical Research & Precision Medicine' },
+    { emoji:'🔮', name:'Materials Science & Chemistry' },
+    { emoji:'🧠', name:'Healthcare AI & Clinical ML' },
+    { emoji:'🖼️', name:'Medical Imaging & Digital Pathology' },
+    { emoji:'🌌', name:'Physics & Astronomy' },
+    { emoji:'🧪', name:'Laboratory Automation' },
+    { emoji:'📚', name:'Scientific Communication' },
+    { emoji:'🔬', name:'Multi-omics & Systems Biology' },
+    { emoji:'🧬', name:'Protein Engineering & Design' },
+    { emoji:'🧬', name:'Bioinformatics & Genomics' },
+    { emoji:'🧪', name:'Cheminformatics & Drug Discovery' },
+    { emoji:'🔬', name:'Proteomics & Mass Spectrometry' },
+  ];
+
+  function esc(s){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  }
+
+  async function main() {
+    const data = await apiFetch('/api/kdense/skills');
+    const skills = data.skills || [];
+
+    const counts = new Map();
+    for (const s of skills) {
+      const k = s.domain || 'Other';
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+
+    document.getElementById('count').textContent = `${skills.length} skills`;
+
+    const catsEl = document.getElementById('cats');
+    catsEl.innerHTML = '';
+
+    for (const c of ORDER) {
+      const n = counts.get(c.name) || 0;
+      const href = withAuth(`/claude-scientific-skills-category.html?domain=${encodeURIComponent(c.name)}`);
+      const a = document.createElement('a');
+      a.className = 'item';
+      a.href = href;
+      a.innerHTML = `
+        <div class="left">
+          <div class="emoji">${esc(c.emoji)}</div>
+          <div class="title">${esc(c.name)} <span style="font-size:12px;font-weight:700;color:#8b949e;">(${n})</span></div>
+        </div>
+        <div class="arrow">→</div>
+      `;
+      catsEl.appendChild(a);
+    }
+  }
+
+  main().catch(e => {
+    document.getElementById('count').textContent = '載入失敗';
+    document.getElementById('cats').innerHTML = `<div style="padding:14px 16px;color:#8b949e;">載入失敗：${esc(e.message)}</div>`;
+  });
+</script>
+</body>
+</html>

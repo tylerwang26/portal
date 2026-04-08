@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🗺️ Maps</title>
+  <style>
+    body{margin:0;background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    .top{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d}
+    .top a{color:#58a6ff;text-decoration:none;font-size:13px}
+    .wrap{padding:16px;max-width:900px;margin:0 auto}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    input{flex:1;min-width:220px;background:#0b1220;border:1px solid #30363d;border-radius:10px;color:#e6edf3;padding:10px 12px;font-size:14px}
+    button{background:#238636;border:1px solid #2ea043;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .card{margin-top:14px;border:1px solid #30363d;background:#0b1220;border-radius:12px;overflow:hidden}
+    .card .hd{padding:12px 14px;border-bottom:1px solid #30363d;font-weight:700}
+    .card .bd{padding:14px}
+    .muted{color:#8b949e;font-size:12px;line-height:1.6}
+    img{max-width:100%;height:auto;border-radius:10px;border:1px solid #30363d}
+    .kv{font-size:13px;color:#c9d1d9;line-height:1.8}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div style="font-weight:800;">🗺️ Maps</div>
+    <div style="flex:1"></div>
+    <a id="back" href="/" title="回首頁"><img src="/assets/icons/house.png" style="width:18px;height:18px;" alt="回首頁"></a>
+  </div>
+
+  <div class="wrap">
+    <div class="row">
+      <input id="q" placeholder="輸入地點，例如：台北101 / 長庚大學 / 松山機場" />
+      <button onclick="search()">搜尋</button>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="hd">結果</div>
+      <div class="bd">
+        <div id="status" class="muted">提示：這裡走後端 proxy，不會在前端暴露你的 Google API key。</div>
+        <div id="info" class="kv" style="margin-top:10px;"></div>
+        <div id="map" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="muted" style="margin-top:12px;">
+      若要接下來整合 Google Calendar（讀寫你的私人行事曆），需要另外做 OAuth（credentials.json），Maps API key 不足以存取私人行事曆。
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token') || '';
+    document.getElementById('back').href = `/?token=${encodeURIComponent(token)}`;
+    const preset = params.get('q');
+    if (preset) document.getElementById('q').value = preset;
+
+    async function search(){
+      const q = document.getElementById('q').value.trim();
+      if(!q) return;
+      document.getElementById('status').textContent = '查詢中...';
+      document.getElementById('info').textContent = '';
+      document.getElementById('map').innerHTML = '';
+      try{
+        const res = await fetch(`/api/maps/geocode?token=${encodeURIComponent(token)}&q=${encodeURIComponent(q)}&_t=${Date.now()}`);
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error || 'geocode failed');
+        document.getElementById('status').textContent = '完成';
+        document.getElementById('info').innerHTML = `
+          <div><b>名稱：</b>${escapeHtml(data.formatted_address || q)}</div>
+          <div><b>座標：</b>${data.lat}, ${data.lng}</div>
+        `;
+        const imgUrl = `/api/maps/static?token=${encodeURIComponent(token)}&lat=${data.lat}&lng=${data.lng}&label=${encodeURIComponent('📍')}`;
+        document.getElementById('map').innerHTML = `<img alt="map" src="${imgUrl}"/>`;
+      }catch(e){
+        document.getElementById('status').textContent = '失敗';
+        document.getElementById('info').textContent = String(e);
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    if (preset) search();
+  </script>
+</body>
+</html>

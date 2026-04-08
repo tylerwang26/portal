@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🦊 登入</title>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+        .login-box { width: 100%; max-width: 360px; }
+        .logo { text-align: center; margin-bottom: 32px; }
+        .logo h1 { font-size: 28px; }
+        .logo p { font-size: 13px; color: #8b949e; margin-top: 4px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; color: #8b949e; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px; background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; color: #e6edf3; font-size: 16px; outline: none;
+        }
+        .form-group input:focus { border-color: #58a6ff; }
+        .btn-primary {
+            width: 100%; padding: 12px; background: #238636; border: none; border-radius: 8px;
+            color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px;
+        }
+        .btn-primary:active { background: #2ea043; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-biometric {
+            width: 100%; padding: 12px; background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; color: #e6edf3; font-size: 15px; cursor: pointer; margin-top: 12px;
+            display: none; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-biometric:active { background: #21262d; }
+        .divider { text-align: center; color: #484f58; font-size: 12px; margin: 16px 0; position: relative; }
+        .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: #21262d; }
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        .error { color: #f85149; font-size: 13px; text-align: center; margin-top: 12px; display: none; }
+        .success { color: #3fb950; font-size: 13px; text-align: center; margin-top: 12px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="logo">
+            <h1>🦊 靈狐 Portal</h1>
+            <p>請登入以繼續</p>
+        </div>
+
+        <form id="loginForm" onsubmit="return handleLogin(event)">
+            <div class="form-group">
+                <label>使用者名稱</label>
+                <input type="text" id="username" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn-primary" id="loginBtn">登入</button>
+        </form>
+
+        <div class="divider" id="bioDivider" style="display:none">或</div>
+        <button class="btn-biometric" id="bioBtn" onclick="handleBiometric()">
+            🔐 使用生物辨識登入
+        </button>
+
+        <div class="error" id="errorMsg"></div>
+        <div class="success" id="successMsg"></div>
+    </div>
+
+    <script>
+        // Encode helpers for WebAuthn
+        function bufferToBase64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let str = '';
+            bytes.forEach(b => str += String.fromCharCode(b));
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+        function base64urlToBuffer(base64url) {
+            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4));
+            const binary = atob(base64 + pad);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        const errorEl = document.getElementById('errorMsg');
+        const successEl = document.getElementById('successMsg');
+
+        function showError(msg) { errorEl.textContent = msg; errorEl.style.display = 'block'; successEl.style.display = 'none'; }
+        function showSuccess(msg) { successEl.textContent = msg; successEl.style.display = 'block'; errorEl.style.display = 'none'; }
+
+        // Check if WebAuthn is available and user has registered credentials
+        async function checkBiometric() {
+            if (!window.PublicKeyCredential) return;
+            try {
+                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                if (!available) return;
+                // Check if user has registered credentials
+                const res = await fetch('/auth/webauthn/has-credential');
+                const data = await res.json();
+                if (data.hasCredential) {
+                    document.getElementById('bioBtn').style.display = 'flex';
+                    document.getElementById('bioDivider').style.display = 'block';
+                }
+            } catch (e) { /* silent */ }
+        }
+        checkBiometric();
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.textContent = '登入中...';
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value,
+                        next: (new URLSearchParams(window.location.search)).get('next') || '/'
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    // After password login, offer to register biometric
+                    if (window.PublicKeyCredential && !data.hasWebAuthn) {
+                        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                        if (available) {
+                            if (confirm('是否要設定 Face ID / 指紋辨識？下次可以直接用生物辨識登入')) {
+                                await registerBiometric();
+                            }
+                        }
+                    }
+                    window.location.href = data.redirect || '/';
+                } else {
+                    showError(data.error || '登入失敗');
+                }
+            } catch (err) {
+                showError('網路錯誤，請重試');
+            }
+            btn.disabled = false;
+            btn.textContent = '登入';
+        }
+
+        async function registerBiometric() {
+            try {
+                // Get registration options from server
+                const optRes = await fetch('/auth/webauthn/register-options', { method: 'POST' });
+                const options = await optRes.json();
+
+                // Decode challenge and user.id
+                options.challenge = base64urlToBuffer(options.challenge);
+                options.user.id = base64urlToBuffer(options.user.id);
+                if (options.excludeCredentials) {
+                    options.excludeCredentials = options.excludeCredentials.map(c => ({
+                        ...c, id: base64urlToBuffer(c.id)
+                    }));
+                }
+
+                // Create credential
+                const credential = await navigator.credentials.create({ publicKey: options });
+
+                // Send to server
+                const body = {
+                    id: credential.id,
+                    rawId: bufferToBase64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        attestationObject: bufferToBase64url(credential.response.attestationObject),
+                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                    }
+                };
+
+                const verifyRes = await fetch('/auth/webauthn/register-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const result = await verifyRes.json();
+                if (result.ok) showSuccess('✅ 生物辨識已設定！');
+                else showError('設定失敗：' + (result.error || ''));
+            } catch (err) {
+                if (err.name !== 'NotAllowedError') showError('設定失敗：' + err.message);
+            }
+        }
+
+        async function handleBiometric() {
+            try {
+                // Get authentication options
+                const optRes = await fetch('/auth/webauthn/auth-options', { method: 'POST' });
+                const options = await optRes.json();
+
+                options.challenge = base64urlToBuffer(options.challenge);
+                if (options.allowCredentials) {
+                    options.allowCredentials = options.allowCredentials.map(c => ({
+                        ...c, id: base64urlToBuffer(c.id)
+                    }));
+                }
+
+                // Get assertion
+                const assertion = await navigator.credentials.get({ publicKey: options });
+
+                const body = {
+                    id: assertion.id,
+                    rawId: bufferToBase64url(assertion.rawId),
+                    type: assertion.type,
+                    response: {
+                        authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+                        clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+                        signature: bufferToBase64url(assertion.response.signature),
+                        userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : null,
+                    }
+                };
+
+                const verifyRes = await fetch('/auth/webauthn/auth-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const result = await verifyRes.json();
+                if (result.ok) {
+                    window.location.href = result.redirect || '/';
+                } else {
+                    showError('驗證失敗：' + (result.error || ''));
+                }
+            } catch (err) {
+                if (err.name !== 'NotAllowedError') showError('驗證失敗：' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

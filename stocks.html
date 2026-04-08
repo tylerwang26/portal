@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🦊 即時面板</title>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; padding: var(--space-4); padding-top: calc(var(--space-4) + var(--safe-t)); -webkit-font-smoothing: antialiased; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); }
+        .header h1 { font-size: var(--fs-xl); margin: 0; color: var(--c-accent); flex-shrink: 0; }
+        .header-time { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--c-muted); margin: 0 8px; flex-grow: 1; text-align: right; line-height: 1; white-space: pre-line; }
+        .market-status { font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: var(--c-muted); margin: 0 8px 0 0; text-align: right; line-height: 1.15; white-space: pre-line; flex-shrink: 0; min-width: 82px; }
+.header-center-links { flex: 1; display:flex; justify-content:center; gap:10px; align-items:center; }
+.header-link { display:inline-flex; align-items:center; justify-content:center; height:32px; padding:0 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color:#e6edf3; font-size:12px; font-weight:800; text-decoration:none; }
+.header-link:active { transform: translateY(1px); }
+        .market-open { color: var(--c-success); }
+        .market-closed { color: rgba(255,255,255,0.55); }
+        .status-badge { background: rgba(84, 214, 44, 0.1); color: var(--c-success); padding: var(--space-1) var(--space-3); border-radius: 999px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+        .close-btn { background: rgba(255, 255, 255, 0.1); color: var(--c-text); border: none; padding: 6px 12px; border-radius: var(--r-sm); font-size: 14px; cursor: pointer; margin-left: 8px; transition: background 0.2s; flex-shrink: 0; }
+        .close-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .close-btn:active { background: rgba(255, 255, 255, 0.3); }
+        .grid { display: grid; grid-template-columns: 1fr; gap: var(--space-3); margin-bottom: var(--space-5); }
+        .card { background: var(--c-surface); border-radius: var(--r-lg); padding: var(--space-4); border: var(--bd-1); margin-bottom: var(--space-3); }
+        .card h2 { font-size: var(--fs-md); color: var(--c-muted); margin: 0 0 var(--space-3) 0; text-transform: uppercase; letter-spacing: 1px; }
+        .signal-list { list-style: none; padding: 0; margin: 0; }
+        .signal-item { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+        .signal-item:last-child { border: none; }
+        .symbol-wrapper { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; min-width: 80px; }
+        .symbol { font-weight: 600; font-size: var(--fs-lg); color: var(--c-text); }
+        .name { font-size: var(--fs-sm); color: var(--c-muted); font-weight: 400; white-space: normal; overflow: hidden; text-overflow: ellipsis; max-width: 220px; line-height: 1.15; }
+        .price-info { display: flex; flex-direction: column; align-items: flex-end; margin-right: 12px; min-width: 70px; margin-left: auto; }
+        
+        /* Smooth transition for normal state */
+        .price-val { 
+            font-size: var(--fs-md); 
+            font-weight: 600; 
+            transition: color 2s ease, background-color 2s ease, box-shadow 2s ease; 
+            border-radius: 4px; 
+            padding: 2px 6px; 
+        }
+        
+        .price-chg { font-size: var(--fs-xs); font-weight: 500; }
+        .txt-up { color: var(--c-success); }
+        .txt-down { color: var(--c-danger); }
+        .txt-flat { color: var(--c-muted); }
+        
+        /* Flash Rule: High Contrast White + Blue Glow */
+        .price-flash { 
+            color: #ffffff !important; 
+            background-color: rgba(0, 149, 255, 0.8) !important;
+            box-shadow: 0 0 12px rgba(0, 149, 255, 0.6);
+            transition: none !important; 
+        }
+        
+        .sparkline { width: 60px; height: 24px; margin-right: 8px; }
+        .sparkline polyline { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+        .spark-up { stroke: var(--c-success); }
+        .spark-down { stroke: var(--c-danger); }
+        .spark-flat { stroke: var(--c-muted); }
+        .action { font-size: var(--fs-sm); padding: 2px 6px; border-radius: var(--r-xs); margin-left: 4px; }
+        .buy { background: rgba(84, 214, 44, 0.2); color: var(--c-success); }
+        .sell { background: rgba(255, 72, 66, 0.2); color: var(--c-danger); }
+        .wait { background: rgba(145, 158, 171, 0.2); color: var(--c-muted); }
+        .footer { text-align: center; color: var(--c-muted); font-size: var(--fs-xs); margin-top: var(--space-8); padding-bottom: calc(var(--space-4) + var(--safe-b)); line-height: 1.6; }
+        .loading { opacity: 0.6; font-style: italic; font-size: var(--fs-sm); color: var(--c-muted); }
+        
+        /* Explorer Styles */
+        .explorer-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-3);
+            height: var(--explorer-h, calc(var(--tg-vh, 100vh) - 220px));
+            min-height: 420px;
+        }
+        @media (min-width: 768px) {
+            .explorer-container { grid-template-columns: 300px 1fr; }
+        }
+        .file-list {
+            height: 100%;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: var(--r-sm);
+            padding: var(--space-2);
+        }
+        .file-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .file-item:hover { background: rgba(255,255,255,0.05); }
+        .file-item.directory { color: var(--c-accent); font-weight: 700; }
+        .file-item i { margin-right: 8px; font-style: normal; }
+        .preview-pane {
+            background: var(--c-surface-2);
+            border-radius: var(--r-sm);
+            padding: var(--space-4);
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: var(--fs-sm);
+            white-space: pre-wrap;
+            overflow: auto;
+            height: 100%;
+            border: var(--bd-2);
+            color: #d1d9e1;
+        }
+        .breadcrumb {
+            font-size: var(--fs-sm);
+            color: var(--c-muted);
+            margin-bottom: var(--space-2);
+            display: flex;
+            gap: var(--space-1);
+        }
+        .breadcrumb span { cursor: pointer; }
+        .breadcrumb span:hover { color: var(--c-accent); }
+        .btn { background: var(--c-accent); color: var(--c-bg); border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div id="main-view">
+        <div class="header">
+            <h1>🦊 股票即時</h1>
+            <div class="header-center-links">
+                <a class="header-link" href="/sentiment-radar" title="輿情風險雷達">🧭 輿情風險雷達</a>
+                <a class="header-link" href="https://finance.worldmonitor.app/" target="_blank" rel="noopener" title="World Monitor">🌍 World Monitor</a>
+            </div>
+            <div class="header-time" id="header-sync-time">--:--:--</div>
+            <div class="market-status" id="market-status">台股: --
+美股: --</div>
+            <div class="status-badge" id="live-badge">LIVE</div>
+            <button class="close-btn" onclick="closeStocks()" title="關閉">✕</button>
+        </div>
+
+        <div class="grid" id="view-signals">
+            <div class="card">
+                <h2>市場行情</h2>
+                <div class="signal-list" id="market-quotes"><div class="loading">載入中...</div></div>
+            </div>
+            <div class="card">
+                <h2>迅狐戰術 (Competition)</h2>
+                <div class="signal-list" id="competition-signals"><div class="loading">載入中...</div></div>
+            </div>
+            <div class="card">
+                <h2>靈狐 V5 持倉</h2>
+                <div class="signal-list" id="longterm-signals"><div class="loading">載入中...</div></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            © 2026 Spirit Fox Strategy · v2.6.5-PRO<br>
+            Server Time: <span id="server-time">Loading...</span>
+        </div>
+    </div>
+
+    <div class="card" id="view-explorer" style="display:none; padding-bottom: calc(var(--space-4) + var(--safe-b));">
+        <div id="explorer-topbar" style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3);">
+            <h2 style="margin:0;">Workspace Explorer 📂</h2>
+            <button class="btn" onclick="toggleView('signals')">回到訊號</button>
+        </div>
+        <div class="breadcrumb" id="explorer-breadcrumb" style="margin-top: var(--space-3);">
+            <span onclick="loadDirectory('')">root</span>
+        </div>
+        <div class="explorer-container">
+            <div class="file-list" id="explorer-list">
+                <div class="loading">載入目錄中...</div>
+            </div>
+            <div class="preview-pane" id="file-preview">
+                <div style="color: var(--c-muted); text-align: center; margin-top: 50px;">點擊檔案以預覽內容</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TG = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        const TG_INITDATA = TG ? TG.initData : '';
+        const priceStates = {};
+
+        function closeStocks() {
+            // If opened in a new tab/window, close it. Otherwise, go back.
+            if (window.opener || window.history.length <= 1) {
+                window.close();
+            } else {
+                window.history.back();
+            }
+        }
+
+        function formatFullDate(date, tz) {
+            return date.toLocaleString('en-US', {
+                timeZone: tz,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+        }
+
+        function getHHMM(tz) {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour: '2-digit', minute: '2-digit',
+                hour12: false
+            }).formatToParts(new Date());
+            const hh = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+            const mm = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+            return { hh, mm, mins: hh * 60 + mm };
+        }
+
+        function getWeekday(tz) {
+            // Returns 0..6 (Sun..Sat)
+            const wd = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(new Date());
+            return ({ Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 })[wd] ?? 0;
+        }
+
+        function computeMarketSession() {
+            // Note: ignores exchange holidays; weekday/time only.
+            const twW = getWeekday('Asia/Taipei');
+            const twT = getHHMM('Asia/Taipei').mins;
+            const twOpen = (twW >= 1 && twW <= 5) && (twT >= 9*60) && (twT < 13*60 + 30);
+
+            const usW = getWeekday('America/New_York');
+            const usT = getHHMM('America/New_York').mins;
+            const usOpen = (usW >= 1 && usW <= 5) && (usT >= 9*60 + 30) && (usT < 16*60);
+
+            return { twOpen, usOpen };
+        }
+
+        function updateMarketStatus() {
+            const { twOpen, usOpen } = computeMarketSession();
+            const el = document.getElementById('market-status');
+            if (!el) return;
+
+            const twCls = twOpen ? 'market-open' : 'market-closed';
+            const usCls = usOpen ? 'market-open' : 'market-closed';
+
+            el.innerHTML = `台股: <span class="${twCls}">${twOpen ? '開盤' : '收盤'}</span>\n美股: <span class="${usCls}">${usOpen ? '開盤' : '收盤'}</span>`;
+        }
+
+        function updateLiveClock() {
+            const now = new Date();
+            
+            // UTC+8 (Asia/Taipei)
+            const twTime = now.toLocaleString('en-US', {
+                timeZone: 'Asia/Taipei',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+
+            // UTC Time
+            const utcTime = now.toLocaleString('en-US', {
+                timeZone: 'UTC',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+
+            const headerTimeEl = document.getElementById('header-sync-time');
+            if (headerTimeEl) {
+                headerTimeEl.innerText = `UTC+8: ${twTime}\nUTC: ${utcTime}`;
+            }
+
+            updateMarketStatus();
+            
+            const serverTimeEl = document.getElementById('server-time');
+            if (serverTimeEl) {
+                serverTimeEl.innerText = formatFullDate(now, 'Asia/Taipei') + ' (CST)';
+            }
+            
+            // Clean up flash class
+            const nowMs = Date.now();
+            document.querySelectorAll('.price-flash').forEach(el => {
+                const symbol = el.getAttribute('data-symbol');
+                if (priceStates[symbol] && (nowMs - priceStates[symbol].lastChanged > 1000)) {
+                    el.classList.remove('price-flash');
+                }
+            });
+        }
+
+        function apiFetch(url) {
+            const sep = url.includes('?') ? '&' : '?';
+            return fetch(`${url}${sep}_t=${Date.now()}`, { headers: TG_INITDATA ? {'X-TG-INITDATA': TG_INITDATA} : {} });
+        }
+
+        function createSparklineHtml(points, colorClass) {
+            if (!points || points.length < 2) return '';
+            const width=60, height=24;
+            const min=Math.min(...points), max=Math.max(...points), range=max-min||1;
+            const coords = points.map((p,i) => `${(i/(points.length-1))*width},${height-((p-min)/range)*height}`).join(' ');
+            const cls = colorClass==='txt-up'?'spark-up':(colorClass==='txt-down'?'spark-down':'spark-flat');
+            return `<svg class="sparkline" viewBox="0 0 ${width} ${height}"><polyline points="${coords}" class="${cls}" /></svg>`;
+        }
+
+        function updateOrAddSignal(containerId, s) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            let itemEl = container.querySelector(`[data-symbol="${s.symbol}"]`);
+            const currentPrice = parseFloat(s.price);
+            
+            let chgText = s.change || '0%';
+            let isUp = false, isDown = false;
+            if (chgText!=='N/A' && chgText!=='0%' && chgText.includes('-')) isDown=true;
+            else if (chgText!=='N/A' && chgText!=='0%') { isUp=true; if(!chgText.startsWith('+')) chgText='+'+chgText; }
+            const colorClass = isUp?'txt-up':(isDown?'txt-down':'txt-flat');
+
+            if (!itemEl) {
+                const div = document.createElement('div');
+                div.className = 'signal-item';
+                div.setAttribute('data-symbol', s.symbol);
+                div.innerHTML = `
+                    <div class="symbol-wrapper"><span class="symbol">${s.symbol}</span>${s.name?`<span class="name">${s.name}</span>`:''}</div>
+                    <div class="price-info">
+                        <span class="price-val ${colorClass}" data-symbol="${s.symbol}">${s.price||'-'}</span>
+                        <span class="price-chg ${colorClass}">${chgText}</span>
+                    </div>
+                    <div class="spark-container">${createSparklineHtml(s.sparkline, colorClass)}</div>
+                    <span class="action ${s.type||'wait'}">${s.action}</span>
+                `;
+                container.appendChild(div);
+                priceStates[s.symbol] = { price: currentPrice, lastChanged: 0 };
+            } else {
+                const priceEl = itemEl.querySelector('.price-val');
+                const chgEl = itemEl.querySelector('.price-chg');
+                const sparkEl = itemEl.querySelector('.spark-container');
+                const actionEl = itemEl.querySelector('.action');
+
+                if (priceStates[s.symbol] && priceStates[s.symbol].price !== currentPrice) {
+                    console.log(`%c[UPDATE] ${s.symbol}: ${priceStates[s.symbol].price} -> ${currentPrice}`, "color: yellow; background: black;");
+                    priceStates[s.symbol].price = currentPrice;
+                    priceStates[s.symbol].lastChanged = Date.now();
+                    priceEl.classList.add('price-flash');
+                }
+
+                priceEl.innerText = s.price || '-';
+                // Update color but keep flash if it's active
+                priceEl.className = `price-val ${colorClass} ${priceEl.classList.contains('price-flash') ? 'price-flash' : ''}`;
+                chgEl.innerText = chgText;
+                chgEl.className = `price-chg ${colorClass}`;
+                sparkEl.innerHTML = createSparklineHtml(s.sparkline, colorClass);
+                actionEl.innerText = s.action;
+                actionEl.className = `action ${s.type||'wait'}`;
+            }
+        }
+
+        async function fetchMarketQuotes() {
+            try {
+                const res = await apiFetch('/api/market-quotes');
+                const data = await res.json();
+
+                const containerId = 'market-quotes';
+                const container = document.getElementById(containerId);
+                if (container.querySelector('.loading')) container.innerHTML = '';
+
+                (data.quotes || []).forEach(q => {
+                    // Reuse signal renderer with neutral action label
+                    updateOrAddSignal(containerId, {
+                        symbol: q.symbol,
+                        name: q.name,
+                        price: q.price,
+                        change: q.change,
+                        sparkline: q.sparkline || [],
+                        action: q.note || '—',
+                        type: 'wait'
+                    });
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchSignals() {
+            try {
+                const res = await apiFetch('/api/signals');
+                const data = await res.json();
+                
+                if (document.querySelector('.loading')) {
+                    document.getElementById('competition-signals').innerHTML = '';
+                    document.getElementById('longterm-signals').innerHTML = '';
+                }
+
+                if (data.competition) data.competition.forEach(s => updateOrAddSignal('competition-signals', s));
+                if (data.longterm) data.longterm.forEach(s => updateOrAddSignal('longterm-signals', s));
+                
+            } catch(e) { console.error(e); }
+        }
+
+        fetchMarketQuotes();
+        fetchSignals();
+        updateLiveClock();
+        setInterval(fetchMarketQuotes, 15000);
+        setInterval(fetchSignals, 5000); 
+        setInterval(updateLiveClock, 100);
+
+        // Explorer Functions
+        async function loadDirectory(path) {
+            const listEl = document.getElementById('explorer-list');
+            listEl.innerHTML = '<div class="loading">載入中...</div>';
+            try {
+                const response = await apiFetch(`/api/workspace/list?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                const breadcrumb = document.getElementById('explorer-breadcrumb');
+                let bcHtml = '<span onclick="loadDirectory(\'\')">root</span>';
+                if (data.currentPath) {
+                    const parts = data.currentPath.split('/');
+                    let currentFull = '';
+                    parts.forEach(p => {
+                        if (!p) return;
+                        currentFull += (currentFull ? '/' : '') + p;
+                        bcHtml += ` / <span onclick="loadDirectory('${currentFull.replace(/'/g, "\\'")}')">${p}</span>`;
+                    });
+                }
+                breadcrumb.innerHTML = bcHtml;
+                if (!data.list || data.list.length === 0) {
+                    listEl.innerHTML = '<div class="loading">空目錄</div>';
+                    return;
+                }
+                listEl.innerHTML = data.list.map(item => `
+                    <div class="file-item ${item.isDirectory ? 'directory' : ''}" 
+                         onclick="${item.isDirectory ? `loadDirectory('${item.path.replace(/'/g, "\\'")}')` : `previewFile('${item.path.replace(/'/g, "\\'")}')`}">
+                        <i>${item.isDirectory ? '📁' : '📄'}</i>
+                        ${item.name}
+                    </div>
+                `).join('');
+            } catch (error) {
+                listEl.innerHTML = '<div class="loading" style="color: var(--c-danger)">載入失敗</div>';
+            }
+        }
+
+        async function previewFile(path) {
+            const previewEl = document.getElementById('file-preview');
+            previewEl.innerText = '載入內容中...';
+            try {
+                const response = await apiFetch(`/api/workspace/view?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                if (data.error) previewEl.innerText = `錯誤: ${data.error}`;
+                else previewEl.innerText = data.content;
+            } catch (error) {
+                previewEl.innerText = '無法載入檔案內容';
+            }
+        }
+
+        function toggleView(which) {
+            const signals = document.getElementById('view-signals');
+            const explorer = document.getElementById('view-explorer');
+            if (which === 'explorer') {
+                signals.style.display = 'none';
+                explorer.style.display = 'block';
+                loadDirectory('');
+            } else {
+                explorer.style.display = 'none';
+                signals.style.display = 'grid';
+            }
+        }
+        function openVoicePortal() {
+            const targetUrl = '/voice';
+            if (TG && typeof TG.openLink === 'function') {
+                TG.openLink(window.location.origin + targetUrl);
+            } else {
+                window.location.href = targetUrl;
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🧭 輿情風險雷達</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; }
+    .bar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: var(--bd-1);
+      background: rgba(18,18,18,0.92);
+      backdrop-filter: blur(10px);
+    }
+    .title { font-weight: 800; font-size: 14px; opacity: .9; }
+    .meta { font-size: 12px; opacity: .7; }
+    .right { display:flex; gap: 10px; align-items:center; }
+    .btn {
+      border: var(--bd-1);
+      background: rgba(255,255,255,0.06);
+      color: var(--c-text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn.primary { background: rgba(255,107,53,0.15); border-color: rgba(255,107,53,0.35); }
+    .btn:active { transform: scale(0.99); }
+    .content {
+      width: 100%;
+      min-height: calc(100vh - 54px);
+      padding: 16px 14px 40px;
+      max-width: 980px;
+      margin: 0 auto;
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    /* Markdown-ish styling */
+    .md h1, .md h2, .md h3 { margin: 1.1em 0 0.5em; color: rgba(255,255,255,0.92); }
+    .md h1 { font-size: 22px; }
+    .md h2 { font-size: 18px; opacity: 0.95; }
+    .md h3 { font-size: 16px; opacity: 0.9; }
+    .md p { margin: 0.7em 0; }
+    .md a { color: #58a6ff; text-decoration: underline; }
+    .md ul, .md ol { padding-left: 1.2em; margin: 0.6em 0; }
+    .md code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+    .md pre { background: rgba(255,255,255,0.06); padding: 12px; border-radius: 12px; overflow-x: auto; }
+    .md pre code { background: transparent; padding: 0; }
+    .md table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 15px; }
+    .md th, .md td { border: 1px solid rgba(255,255,255,0.12); padding: 8px 10px; vertical-align: top; }
+    .md th { background: rgba(255,255,255,0.06); }
+    .md blockquote { margin: 0.8em 0; padding: 8px 12px; border-left: 3px solid rgba(255,107,53,0.55); background: rgba(255,107,53,0.08); border-radius: 10px; }
+    .toast {
+      position: fixed; left: 14px; right: 14px; bottom: 14px;
+      background: rgba(0,0,0,0.72);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div>
+      <div class="title">🧭 輿情風險雷達（GEMS × 台股 8 產業群）</div>
+      <div class="meta" id="status">載入中…</div>
+    </div>
+    <div class="right">
+      <button class="btn primary" id="runBtn" onclick="runUpdate()" title="立即更新">🔄</button>
+      <button class="btn" id="closeBtn" onclick="goHome()" title="關閉">✕</button>
+    </div>
+  </div>
+
+  <div class="content" id="content" aria-live="polite"></div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const REPORT_PATH = 'obsidian_vault/30_Fox_Trading/Research/Sentiment_Risk_Radar.md';
+
+    function token() {
+      const p = new URLSearchParams(location.search);
+      return p.get('token') || '';
+    }
+
+    function rawMdUrl() {
+      const t = token();
+      const u = new URL('/api/workspace/raw', location.origin);
+      u.searchParams.set('path', REPORT_PATH);
+      if (t) u.searchParams.set('token', t);
+      // cache-bust
+      u.searchParams.set('v', String(Date.now()));
+      return u.toString();
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function goHome() {
+      const t = token();
+      location.href = t ? `/?token=${t}` : '/';
+    }
+
+    async function fetchStatus() {
+      const t = token();
+      const u = new URL('/api/sentiment-radar/status', location.origin);
+      if (t) u.searchParams.set('token', t);
+      const res = await fetch(u.toString());
+      if (!res.ok) throw new Error('status fetch failed');
+      return await res.json();
+    }
+
+    async function updateStatusLine() {
+      try {
+        const s = await fetchStatus();
+        document.getElementById('status').textContent = `最後更新：${s.updatedAtTaipei || '未知'} ｜ Heatmap：0–10 ｜ 資料窗：近 ${s.windowHours || 72} 小時`;
+        return s;
+      } catch (e) {
+        document.getElementById('status').textContent = '狀態取得失敗（可能剛重啟）';
+        return null;
+      }
+    }
+
+    async function refreshReport() {
+      const el = document.getElementById('content');
+      el.classList.remove('md');
+      el.innerHTML = '<div style="opacity:.75; font-size:13px; padding:12px 2px;">載入中…</div>';
+
+      try {
+        const res = await fetch(rawMdUrl());
+        if (!res.ok) throw new Error('raw fetch failed');
+        const md = await res.text();
+
+        const html = marked.parse(md || '');
+        el.classList.add('md');
+        el.innerHTML = html;
+      } catch (e) {
+        el.innerHTML = `<div style="opacity:.85; font-size:14px; padding:12px 2px;">載入失敗：${String(e?.message || e)}</div>`;
+      }
+
+      toast('已重新載入');
+    }
+
+    async function runUpdate() {
+      const btn = document.getElementById('runBtn');
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = '更新中…';
+
+      const before = await updateStatusLine();
+      const beforeTs = before?.updatedAtMs || 0;
+
+      try {
+        const t = token();
+        const u = new URL('/api/sentiment-radar/run', location.origin);
+        if (t) u.searchParams.set('token', t);
+        const res = await fetch(u.toString(), { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || 'run failed');
+        toast('已觸發更新，等待生成…');
+
+        // Poll status for up to ~2 minutes
+        const start = Date.now();
+        while (Date.now() - start < 120000) {
+          await new Promise(r => setTimeout(r, 4000));
+          const s = await updateStatusLine();
+          if (s?.updatedAtMs && s.updatedAtMs > beforeTs) {
+            toast('更新完成');
+            await refreshReport();
+            break;
+          }
+        }
+      } catch (e) {
+        toast('更新失敗：' + (e.message || e));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = old;
+      }
+    }
+
+    // init
+    refreshReport();
+    updateStatusLine();
+  </script>
+</body>
+</html>

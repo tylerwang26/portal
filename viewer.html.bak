@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小i 🦊 檔案閱讀器</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+    <script defer src="/vendor/katex/katex.min.js"></script>
+    <script defer src="/vendor/katex/contrib/auto-render.min.js"></script>
+    <!-- PDF.js for better PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="/tokens.css" />
+    <style>
+        body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; padding: 0; overflow-x: hidden; }
+        .container { max-width: 800px; margin: 0 auto; padding: var(--space-6); padding-top: calc(var(--space-6) + var(--safe-t)); }
+        .nav { position: sticky; top: 0; background: rgba(18, 18, 18, 0.8); backdrop-filter: blur(10px); padding: var(--space-4); border-bottom: var(--bd-1); display: flex; align-items: center; justify-content: space-between; z-index: 100; }
+        .title {
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0.75;
+            flex: 1;
+            min-width: 0;
+            max-width: none;
+            white-space: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            text-overflow: clip;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .title::-webkit-scrollbar { display: none; }
+        #content { line-height: 1.6; font-size: 18px; }
+
+        /* Outline drawer */
+        .drawer-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            opacity: 0; pointer-events: none; transition: opacity 160ms ease;
+            z-index: 120;
+        }
+        .drawer {
+            position: fixed; top: 0; left: 0; height: 100vh; width: min(340px, 86vw);
+            background: rgba(18,18,18,0.98);
+            border-right: var(--bd-1);
+            transform: translateX(-100%);
+            transition: transform 180ms ease;
+            z-index: 130;
+            display: flex; flex-direction: column;
+            padding-top: var(--safe-t);
+        }
+        .drawer.open { transform: translateX(0); }
+        .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+        .drawer-header { padding: 14px 14px 10px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom: var(--bd-1); }
+        .drawer-title { font-size: 14px; font-weight: 700; opacity: 0.9; }
+        .drawer-body { padding: 10px 8px; overflow: auto; -webkit-overflow-scrolling: touch; }
+        .outline-item { display:block; padding: 8px 10px; border-radius: 10px; color: var(--c-text); text-decoration: none; font-size: 14px; line-height: 1.3; }
+        .outline-item:hover { background: rgba(255,255,255,0.06); }
+        .outline-level-1 { padding-left: 10px; font-weight: 700; }
+        .outline-level-2 { padding-left: 18px; }
+        .outline-level-3 { padding-left: 26px; opacity: 0.95; }
+        .outline-level-4 { padding-left: 34px; opacity: 0.9; }
+        .outline-level-5 { padding-left: 42px; opacity: 0.85; }
+        .outline-level-6 { padding-left: 50px; opacity: 0.8; }
+        .outline-empty { padding: 14px; opacity: 0.7; font-size: 13px; }
+        #content h1, #content h2, #content h3 { color: var(--c-accent); margin-top: 1.5em; }
+        #content a { color: var(--c-accent); text-decoration: underline; text-decoration-style: dotted; }
+        #content table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+        #content th, #content td { border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; text-align: left; }
+        #content code { background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+        #content pre { background: #1e1e1e; padding: 16px; border-radius: 8px; overflow-x: auto; }
+        #content img { max-width: 100%; height: auto; border-radius: 8px; }
+        #content blockquote { border-left: 4px solid var(--c-accent); margin: 1em 0; padding-left: 1em; opacity: 0.8; }
+        .btn { border: var(--bd-1); background: rgba(255,255,255,0.05); color: var(--c-text); padding: 6px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+        /* Header icon buttons (match Explorer: 30x30) */
+        .btn.icon30 { min-width: 30px; width: 30px; height: 30px; padding: 0; justify-content: center; font-size: 14px; }
+        .btn.note-exists { background: rgba(255, 193, 7, 0.18); border-color: rgba(255, 193, 7, 0.45); }
+        .btn-icon { width: 18px; height: 18px; fill: currentColor; }
+        
+        /* PDF Specific */
+        .pdf-container { 
+            width: 100%; 
+            min-height: calc(100vh - 240px); 
+            overflow: auto; 
+            -webkit-overflow-scrolling: touch;
+            border: var(--bd-1);
+            border-radius: 8px;
+            background: #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+        }
+        .pdf-canvas { 
+            margin: 0 auto 20px auto; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            max-width: 100%;
+            height: auto !important;
+        }
+        .pdf-controls {
+            position: sticky;
+            top: 60px;
+            background: rgba(18, 18, 18, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            z-index: 50;
+            border: var(--bd-1);
+        }
+        .pdf-controls button {
+            background: rgba(255,255,255,0.1);
+            border: var(--bd-1);
+            color: var(--c-text);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .pdf-controls button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .pdf-controls button:hover:not(:disabled) {
+            background: rgba(255,255,255,0.2);
+        }
+        .pdf-page-info {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--c-accent);
+            min-width: 100px;
+            text-align: center;
+        }
+        .pdf-scale-info {
+            font-size: 13px;
+            opacity: 0.7;
+            min-width: 60px;
+            text-align: center;
+        }
+        #pdf-viewer { width: 100%; height: 100%; border: none; }
+        .pdf-tools { margin-top: 12px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+            <!-- Outline button should live on the upper-left (mobile-friendly) -->
+            <button class="btn icon30" id="outline-btn" onclick="toggleOutline()" title="章節導覽">☰</button>
+            <div class="title" id="filename">檔案閱讀器</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn icon30" onclick="toggleVoice()" id="voice-btn" title="朗讀內文">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" /></svg>
+            </button>
+            <button class="btn icon30" onclick="shareFile()" id="share-btn" title="分享">
+                <svg class="btn-icon" viewBox="0 0 24 24"><path d="M18,16.08C17.24,16.08 16.56,16.38 16.04,16.85L8.91,12.7C8.96,12.47 9,12.24 9,12C9,11.76 8.96,11.53 8.91,11.3L15.96,7.19C16.5,7.69 17.21,8 18,8A3,3 0 0,0 21,5A3,3 0 0,0 18,2A3,3 0 0,0 15,5C15,5.24 15.04,5.47 15.09,5.7L8.04,9.81C7.5,9.31 6.79,9 6,9A3,3 0 0,0 3,12A3,3 0 0,0 6,15C6.79,15 7.5,14.69 8.04,14.19L15.16,18.34C15.11,18.55 15.08,18.77 15.08,19C15.08,20.61 16.39,21.91 18,21.91C19.61,21.91 20.92,20.61 20.92,19C20.92,17.39 19.61,16.08 18,16.08Z" /></svg>
+            </button>
+            <button class="btn icon30" id="note-btn" onclick="openNote()" title="筆記">📝</button>
+            <button class="btn icon30" id="edit-btn" onclick="openEdit()" title="編輯">✏️</button>
+            <button class="btn icon30" id="fav-btn" onclick="toggleFavorite()" title="收藏">☆</button>
+            <button class="btn icon30" onclick="goBack()" title="關閉">✕</button>
+        </div>
+    </div>
+    <!-- Outline Drawer -->
+    <div id="drawer-backdrop" class="drawer-backdrop" onclick="closeOutline()"></div>
+    <div id="outline-drawer" class="drawer" aria-hidden="true">
+        <div class="drawer-header">
+            <div class="drawer-title">章節導覽</div>
+            <button class="btn icon30" onclick="closeOutline()">✕</button>
+        </div>
+        <div class="drawer-body" id="outline-list">
+            <div class="outline-empty">（尚未產生導覽）</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="content">載入中...</div>
+    </div>
+
+
+    <script src="/assets/tg_auth.js"></script>
+    <script>
+        const webApp = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        try { webApp && webApp.ready(); } catch (e) {}
+
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+
+        let currentFileContent = null;
+        let currentFileName = '';
+        let currentFilePath = '';
+
+        function getTokenParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token') || '';
+        }
+
+        function buildApiUrl(base, params = {}) {
+            const u = new URL(base, window.location.origin);
+            const token = getTokenParam();
+            if (token) u.searchParams.set('token', token);
+            for (const [k, v] of Object.entries(params)) {
+                if (v === undefined || v === null) continue;
+                u.searchParams.set(k, v);
+            }
+            return u.toString();
+        }
+
+        function computeNotePath(filePath) {
+            // Same directory, filename with _Note.md suffix
+            const parts = filePath.split('/');
+            const name = parts.pop() || '';
+            const dir = parts.join('/');
+
+            let noteName;
+            if (name.toLowerCase().endsWith('.md')) {
+                noteName = name.replace(/\.md$/i, '_Note.md');
+            } else {
+                noteName = name + '_Note.md';
+            }
+            return (dir ? dir + '/' : '') + noteName;
+        }
+
+        function openNote() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const filePath = currentFilePath || urlParams.get('path') || '';
+            if (!filePath) {
+                alert('找不到目前檔案路徑');
+                return;
+            }
+            const notePath = computeNotePath(filePath);
+            const token = getTokenParam();
+            const noteUrl = `/note?path=${encodeURIComponent(notePath)}&src=${encodeURIComponent(filePath)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+            window.open(noteUrl, '_blank', 'noopener');
+        }
+
+        function openEdit() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const filePath = currentFilePath || urlParams.get('path') || '';
+            if (!filePath) {
+                alert('找不到目前檔案路徑');
+                return;
+            }
+            const token = getTokenParam();
+            const editUrl = `/note?path=${encodeURIComponent(filePath)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+            // Same tab
+            window.location.href = editUrl;
+        }
+
+        async function updateNoteBtnState() {
+            try {
+                const filePath = currentFilePath || (new URLSearchParams(window.location.search).get('path') || '');
+                const btn = document.getElementById('note-btn');
+                if (!btn || !filePath) return;
+
+                const notePath = computeNotePath(filePath);
+                const url = buildApiUrl('/api/workspace/view', { path: notePath, _t: Date.now().toString() });
+                const res = await fetch(url, { credentials: 'include' });
+                if (res.ok) btn.classList.add('note-exists');
+                else btn.classList.remove('note-exists');
+            } catch (e) {
+                try { document.getElementById('note-btn')?.classList.remove('note-exists'); } catch {}
+            }
+        }
+
+        // --- Favorites (☆/⭐️) ---
+        async function checkIfFavorite() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                const filePath = urlParams.get('path') || '';
+                const res = await fetch(`/api/favorites?token=${token}&_t=${Date.now()}`);
+                const favs = await res.json();
+                const isFav = favs.some(f => f.path === filePath);
+                document.getElementById('fav-btn').textContent = isFav ? '⭐️' : '☆';
+            } catch(e) {}
+        }
+
+        async function toggleFavorite() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                const filePath = urlParams.get('path') || '';
+                if (!filePath) return;
+                const res = await fetch(`/api/favorites/toggle?token=${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: filePath, name: filePath.split('/').pop() })
+                });
+                const data = await res.json();
+                document.getElementById('fav-btn').textContent = data.favorited ? '⭐️' : '☆';
+
+                // notify explorer to refresh favorites
+                try {
+                    const ts = Date.now();
+                    localStorage.setItem('portal:favoritesChanged', String(ts));
+                    if (window.opener) {
+                        window.opener.postMessage({ type: 'favoritesChanged', ts }, '*');
+                    }
+                } catch (e) {}
+            } catch(e) { console.error('Toggle fav error:', e); }
+        }
+
+        checkIfFavorite();
+
+        function goBack() {
+            // If opened in a new tab, close it. Otherwise, go back to explorer.
+            if (window.opener || window.history.length === 1) {
+                window.close();
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const path = urlParams.get('path') || '';
+                const token = urlParams.get('token') || '';
+                let dir = '';
+                if (path) {
+                    const parts = path.split('/');
+                    parts.pop(); 
+                    dir = parts.join('/');
+                }
+                window.location.href = `/explorer?path=${encodeURIComponent(dir)}&token=${token}`;
+            }
+        }
+
+        async function shareFile() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const path = urlParams.get('path');
+            const token = urlParams.get('token') || '';
+            if (!path) return;
+
+            const tokenQs = token ? `&token=${encodeURIComponent(token)}` : '';
+            const rawUrl = `/api/workspace/raw?path=${encodeURIComponent(path)}${tokenQs}`;
+            const filename = currentFileName || (path.split('/').pop() || 'file');
+
+            try {
+                // Fetch file as Blob (needed for Web Share API / Save File Picker)
+                const res = await fetch(rawUrl, { credentials: 'include' });
+                if (!res.ok) throw new Error('raw fetch failed: ' + res.status);
+                const blob = await res.blob();
+
+                // 1) Mobile: Web Share sheet (media/file chooser)
+                if (navigator.share) {
+                    try {
+                        const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({ files: [file], title: filename });
+                            return;
+                        }
+                    } catch (e) {
+                        // fall through
+                    }
+                }
+
+                // 2) Desktop (Chromium): Save As dialog via File System Access API
+                if (window.showSaveFilePicker) {
+                    const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: ext ? [{ description: 'File', accept: { [blob.type || 'application/octet-stream']: ['.' + ext] } }] : undefined
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return;
+                }
+
+                // 3) Fallback: normal download
+                downloadFallback();
+            } catch (e) {
+                console.error('shareFile failed, fallback to download:', e);
+                downloadFallback();
+            }
+        }
+
+        function downloadFallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const path = urlParams.get('path');
+            const token = urlParams.get('token') || '';
+            const tokenQs = token ? `&token=${encodeURIComponent(token)}` : '';
+            const rawUrl = `/api/workspace/raw?path=${encodeURIComponent(path)}${tokenQs}`;
+            
+            const a = document.createElement('a');
+            a.href = rawUrl;
+            a.download = currentFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        function renderMath() {
+            if (typeof renderMathInElement === 'function') {
+                renderMathInElement(document.getElementById('content'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError : false
+                });
+            } else {
+                setTimeout(renderMath, 100);
+            }
+        }
+
+        async function renderMermaid() {
+            const elements = document.querySelectorAll('.language-mermaid');
+            for (let i = 0; i < elements.length; i++) {
+                const element = elements[i];
+                const code = element.innerText;
+                const parent = element.parentElement;
+                const id = 'mermaid-' + i;
+                try {
+                    const { render } = mermaid;
+                    const { svg } = await render(id, code);
+                    parent.outerHTML = `<div class="mermaid-container" style="display:flex; justify-content:center; margin: 20px 0;">${svg}</div>`;
+                } catch (e) {
+                    console.error('Mermaid render error:', e);
+                }
+            }
+        }
+
+        function setupMarked() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || '';
+            const currentPath = urlParams.get('path') || '';
+
+            // Render single newlines as <br> (matches note editor expectation for blockquotes)
+            try { marked.setOptions({ breaks: true }); } catch (e) {}
+            
+            const renderer = {
+                image(href, title, text) {
+                    let url = href;
+                    if (typeof href === 'object') {
+                        // Handle new marked version object signature
+                        url = href.href;
+                        text = href.text;
+                        title = href.title;
+                    }
+                    
+                    if (url && !url.startsWith('http') && !url.startsWith('/')) {
+                        // Path resolution: assume relative to the file being viewed
+                        let dir = '';
+                        if (currentPath.includes('/')) {
+                            dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                        }
+                        
+                        let targetPath = dir + url;
+                        
+                        // Normalize path (resolve ..)
+                        const parts = targetPath.split('/');
+                        const normalizedParts = [];
+                        for (const part of parts) {
+                            if (part === '..') {
+                                normalizedParts.pop();
+                            } else if (part !== '.' && part !== '') {
+                                normalizedParts.push(part);
+                            }
+                        }
+                        targetPath = normalizedParts.join('/');
+                        
+                        const tokenQs = token ? `&token=${encodeURIComponent(token)}` : '';
+                        const rawUrl = `/api/workspace/raw?path=${encodeURIComponent(targetPath)}${tokenQs}`;
+
+                        // Obsidian-style attachments fallback: try ./attachments/<filename>
+                        const filenameOnly = (url || '').split('/').pop();
+                        const attachPath = filenameOnly ? (dir + 'attachments/' + filenameOnly) : '';
+                        const attachUrl = attachPath ? `/api/workspace/raw?path=${encodeURIComponent(attachPath)}${tokenQs}` : '';
+
+                        const onerr = attachUrl ? `this.onerror=null;this.src='${attachUrl}';` : '';
+                        return `<img src="${rawUrl}" alt="${text || ''}" title="${title || ''}" onerror="${onerr}">`;
+                    }
+                    return `<img src="${url || ''}" alt="${text || ''}" title="${title || ''}">`;
+                },
+
+                link(href, title, text) {
+                    let url = href;
+                    if (typeof href === 'object') {
+                        url = href.href;
+                        text = href.text;
+                        title = href.title;
+                    }
+
+                    const label = text || url || '';
+
+                    // Obsidian wiki link scheme: obsidian:<target>
+                    if (typeof url === 'string' && url.startsWith('obsidian:')) {
+                        const target = url.replace(/^obsidian:/, '');
+                        const t = target.trim();
+                        if (!t) return label;
+
+                        // If no extension, assume .md
+                        const targetFile = /\.[A-Za-z0-9]+$/.test(t) ? t : (t + '.md');
+                        let dir = '';
+                        if (currentPath.includes('/')) {
+                            dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                        }
+                        let resolved = dir + targetFile;
+                        // Normalize path (resolve ..)
+                        const parts = resolved.split('/');
+                        const normalized = [];
+                        for (const part of parts) {
+                            if (part === '..') normalized.pop();
+                            else if (part !== '.' && part !== '') normalized.push(part);
+                        }
+                        resolved = normalized.join('/');
+
+                        const viewerUrl = `/viewer?path=${encodeURIComponent(resolved)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                        return `<a href="${viewerUrl}" title="${(title || '').replace(/"/g,'&quot;')}">${label}</a>`;
+                    }
+
+                    // default behavior
+                    return `<a href="${url || ''}" title="${(title || '').replace(/"/g,'&quot;')}">${label}</a>`;
+                }
+            };
+            marked.use({ renderer });
+        }
+
+        setupMarked();
+
+        // PDF.js rendering with controls
+        let pdfDoc = null;
+        let currentPage = 1;
+        let pageCount = 0;
+        let currentScale = 1.5;
+        const MIN_SCALE = 0.5;
+        const MAX_SCALE = 3.0;
+
+        async function renderPDF(path, token) {
+            const rawUrl = `/api/workspace/raw?path=${encodeURIComponent(path)}&token=${token}`;
+            
+            document.getElementById('content').innerHTML = `
+                <div class="pdf-controls">
+                    <button onclick="changePage(-1)" id="prev-page">◀ 上一頁</button>
+                    <div class="pdf-page-info">
+                        <span id="page-num">1</span> / <span id="page-count">-</span>
+                    </div>
+                    <button onclick="changePage(1)" id="next-page">下一頁 ▶</button>
+                    <span style="width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 8px;"></span>
+                    <button onclick="changeScale(-0.25)">🔍−</button>
+                    <div class="pdf-scale-info" id="scale-info">150%</div>
+                    <button onclick="changeScale(0.25)">🔍+</button>
+                </div>
+                <div class="pdf-container" id="pdf-pages-container">
+                    <div style="color: var(--c-accent); font-size: 14px; padding: 40px;">📄 載入 PDF 中...</div>
+                </div>
+                <div class="pdf-tools">
+                    <a href="${rawUrl}" download="${currentFileName}" class="btn" style="background: rgba(255,255,255,0.1);">
+                        💾 下載 PDF
+                    </a>
+                    <a href="${rawUrl}" target="_blank" class="btn" style="background: var(--c-accent); color: #000; font-weight: bold;">
+                        🔗 在新分頁開啟
+                    </a>
+                </div>
+            `;
+
+            try {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                
+                const loadingTask = pdfjsLib.getDocument(rawUrl);
+                pdfDoc = await loadingTask.promise;
+                pageCount = pdfDoc.numPages;
+                
+                document.getElementById('page-count').textContent = pageCount;
+                await buildPdfOutline();
+                await renderCurrentPage();
+            } catch (error) {
+                console.error('PDF load error:', error);
+                document.getElementById('pdf-pages-container').innerHTML = `
+                    <div style="color: #ff6b6b; padding: 40px; text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                        <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">無法載入 PDF</div>
+                        <div style="font-size: 14px; opacity: 0.7;">${error.message}</div>
+                        <div style="margin-top: 20px;">
+                            <a href="${rawUrl}" target="_blank" class="btn" style="background: var(--c-accent); color: #000;">
+                                在新分頁開啟原始檔案
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderCurrentPage() {
+            if (!pdfDoc) return;
+            
+            const container = document.getElementById('pdf-pages-container');
+            container.innerHTML = '<div style="color: var(--c-accent); font-size: 14px; padding: 40px;">🔄 渲染中...</div>';
+            
+            try {
+                const page = await pdfDoc.getPage(currentPage);
+                const viewport = page.getViewport({ scale: currentScale });
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'pdf-canvas';
+                const context = canvas.getContext('2d');
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                await page.render(renderContext).promise;
+                
+                container.innerHTML = '';
+                container.appendChild(canvas);
+                
+                document.getElementById('page-num').textContent = currentPage;
+                document.getElementById('prev-page').disabled = currentPage === 1;
+                document.getElementById('next-page').disabled = currentPage === pageCount;
+                
+            } catch (error) {
+                console.error('Page render error:', error);
+                container.innerHTML = `<div style="color: #ff6b6b; padding: 40px;">渲染失敗: ${error.message}</div>`;
+            }
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= pageCount) {
+                currentPage = newPage;
+                renderCurrentPage();
+                // Scroll to top of page
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function changeScale(delta) {
+            const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, currentScale + delta));
+            if (newScale !== currentScale) {
+                currentScale = newScale;
+                document.getElementById('scale-info').textContent = Math.round(currentScale * 100) + '%';
+                renderCurrentPage();
+            }
+        }
+
+        function preprocessObsidianEmbeds(md) {
+            if (!md) return md;
+            // Obsidian syntax:
+            // - Embeds: ![[image.png]] / ![[note.md]]
+            // - Wiki links: [[note]] / [[note|alias]]
+            let out = md.replace(/!\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (m, target, alt) => {
+                const t = (target || '').trim();
+                if (!t) return m;
+
+                // Images → standard markdown image
+                const a = (alt || t).trim();
+                if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(t)) {
+                    return `![${a}](${t})`;
+                }
+
+                // Embedded markdown → placeholder div (rendered after marked.parse)
+                if (/\.md$/i.test(t)) {
+                    // keep raw target in data-embed; we'll resolve relative path later.
+                    return `<div class="obsidian-embed-md" data-embed="${t.replace(/&/g,'&amp;').replace(/\"/g,'&quot;')}"></div>`;
+                }
+
+                return m;
+            });
+
+            // Wiki links → keep for renderer.link to resolve (obsidian: scheme)
+            out = out.replace(/(?<!!)\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (m, target, alias) => {
+                const t = (target || '').trim();
+                if (!t) return m;
+                const label = (alias || t).trim();
+                return `[${label}](obsidian:${t})`;
+            });
+
+            return out;
+        }
+
+        function resolveRelativePath(baseFilePath, rel) {
+            // baseFilePath: e.g. obsidian_vault/.../A.md
+            // rel: e.g. attachments/x.png or x.md
+            if (!rel) return rel;
+            if (rel.startsWith('/') || rel.startsWith('http')) return rel;
+
+            let dir = '';
+            if (baseFilePath && baseFilePath.includes('/')) {
+                dir = baseFilePath.substring(0, baseFilePath.lastIndexOf('/') + 1);
+            }
+            let targetPath = dir + rel;
+
+            // Normalize path (resolve ..)
+            const parts = targetPath.split('/');
+            const normalized = [];
+            for (const part of parts) {
+                if (part === '..') normalized.pop();
+                else if (part !== '.' && part !== '') normalized.push(part);
+            }
+            return normalized.join('/');
+        }
+
+        async function renderObsidianEmbeddedMarkdown(baseFilePath, initData, token, maxDepth = 2, depth = 0) {
+            if (depth >= maxDepth) return;
+
+            const nodes = Array.from(document.querySelectorAll('.obsidian-embed-md'));
+            for (const el of nodes) {
+                // Avoid re-render loops
+                if (el.getAttribute('data-rendered') === '1') continue;
+
+                const rel = (el.getAttribute('data-embed') || '').trim();
+                if (!rel) { el.setAttribute('data-rendered','1'); continue; }
+
+                const tokenQs = token ? `&token=${encodeURIComponent(token)}` : '';
+                const candidates = [];
+
+                // 1) relative to current note
+                candidates.push(resolveRelativePath(baseFilePath, rel));
+
+                // 2) Obsidian-style: ./attachments/<filename> (only when no explicit slash)
+                if (!rel.includes('/')) {
+                    candidates.push(resolveRelativePath(baseFilePath, 'attachments/' + rel));
+                }
+
+                let loaded = null;
+                for (const p of candidates) {
+                    try {
+                        const url = `/api/workspace/view?path=${encodeURIComponent(p)}${tokenQs}`;
+                        const res = await fetch(url, {
+                            credentials: 'include',
+                            headers: initData ? { 'X-TG-INITDATA': initData } : undefined
+                        });
+                        if (!res.ok) continue;
+                        const data = await res.json().catch(() => ({}));
+                        if (!data.content) continue;
+                        loaded = { path: p, content: data.content };
+                        break;
+                    } catch (e) {
+                        continue;
+                    }
+                }
+
+                if (!loaded) {
+                    el.innerHTML = `<div style="opacity:.7; padding:10px; border:1px dashed rgba(255,255,255,.15); border-radius:10px;">⚠️ 找不到嵌入筆記：${rel}</div>`;
+                    el.setAttribute('data-rendered','1');
+                    continue;
+                }
+
+                // Render embedded markdown content
+                const inner = preprocessObsidianEmbeds(loaded.content);
+                el.innerHTML = `<div style="border:1px solid rgba(255,255,255,.10); border-radius:12px; padding:12px; background: rgba(255,255,255,.03);">
+                  <div style="font-weight:800; opacity:.85; margin-bottom:8px;">📎 嵌入：${loaded.path.split('/').pop()}</div>
+                  <div class="embed-body">${marked.parse(inner)}</div>
+                </div>`;
+                el.setAttribute('data-rendered','1');
+
+                // Allow nested embeds (bounded)
+                await renderObsidianEmbeddedMarkdown(loaded.path, initData, token, maxDepth, depth + 1);
+            }
+        }
+
+        async function fetchContent() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const path = urlParams.get('path');
+            const token = urlParams.get('token') || '';
+            const initData = (window.portalAuth ? window.portalAuth.getInitData() : (webApp ? webApp.initData : ''));
+
+            if (!path) {
+                document.getElementById('content').innerHTML = '❌ 缺少檔案路徑';
+                return;
+            }
+
+            currentFilePath = path;
+            currentFileName = path.split('/').pop();
+            document.getElementById('filename').innerText = currentFileName;
+
+            // Browser tab title should reflect the opened content
+            document.title = currentFileName ? `${currentFileName} · Viewer` : 'Viewer';
+
+            // If user opens a *_Note.md, default to the note editor (unless explicitly previewing)
+            const notePreview = urlParams.get('notePreview') === '1';
+            if (currentFileName.toLowerCase().endsWith('_note.md') && !notePreview) {
+                const token = getTokenParam();
+                const noteUrl = `/note?path=${encodeURIComponent(path)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                window.location.replace(noteUrl);
+                return;
+            }
+
+            // Highlight 📝 button if note exists
+            updateNoteBtnState();
+
+            const ext = (currentFileName.split('.').pop() || '').toLowerCase();
+            const officeExts = ['doc','docx','ppt','pptx','xls','xlsx'];
+            if (officeExts.includes(ext)) {
+                try {
+                    const previewUrl = buildApiUrl('/api/office/preview', { path });
+                    const res = await fetch(previewUrl, { credentials: 'include' });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || 'Office preview failed');
+                    document.getElementById('content').innerHTML = `<div style="font-size:18px; line-height:1.6;">${marked.parse(preprocessObsidianEmbeds(data.content || ''))}</div>`;
+                    await renderMermaid();
+                    renderMath();
+                    await renderObsidianEmbeddedMarkdown(path, initData, token);
+                } catch (e) {
+                    document.getElementById('content').innerHTML = `<div style="color:#f85149; padding:20px;">❌ Office 預覽失敗：${esc(e.message)}</div>`;
+                }
+                return;
+            }
+
+            if (currentFileName.toLowerCase().endsWith('.pdf')) {
+                // Prefer token-based raw endpoint for Telegram WebApp (iframes can't send TG headers)
+                // Fallback to session-auth /raw for normal browser sessions.
+                const rawUrl = token
+                    ? `/api/workspace/raw?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`
+                    : (initData
+                        ? `/api/workspace/raw?path=${encodeURIComponent(path)}&initData=${encodeURIComponent(initData)}`
+                        : `/raw?path=${encodeURIComponent(path)}`);
+
+                // Hybrid strategy:
+                // - Small PDFs: use PDF.js (outline + stable rendering)
+                // - Large PDFs: fall back to native browser PDF viewer (faster + less memory)
+                const PDFJS_MAX_BYTES = 8 * 1024 * 1024; // 8MB
+                let sizeBytes = 0;
+                try {
+                    const head = await fetch(rawUrl, {
+                        method: 'HEAD',
+                        credentials: 'include',
+                        headers: initData ? { 'X-TG-INITDATA': initData } : undefined
+                    });
+                    const len = head.headers.get('content-length');
+                    sizeBytes = len ? parseInt(len, 10) : 0;
+                } catch (e) {
+                    sizeBytes = 0;
+                }
+
+                if (sizeBytes && sizeBytes <= PDFJS_MAX_BYTES) {
+                    // PDF.js renderer (keeps our outline drawer)
+                    await renderPdf(rawUrl);
+                    document.title = currentFileName; // avoid showing "raw" in tab title
+                    document.getElementById('share-btn').style.display = 'flex';
+                    document.getElementById('outline-btn').style.display = 'flex';
+                    return;
+                }
+
+                // Native browser PDF renderer
+                document.getElementById('content').innerHTML = `
+                    <div style="height: calc(100vh - 140px); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.2);">
+                        <iframe src="${rawUrl}" style="width:100%; height:100%; border:0; background:#111;"></iframe>
+                    </div>
+                `;
+
+                document.title = currentFileName; // avoid showing "raw" in tab title
+                document.getElementById('share-btn').style.display = 'flex';
+                document.getElementById('outline-btn').style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/workspace/view?path=${encodeURIComponent(path)}&token=${token}`, {
+                    headers: { 'X-TG-INITDATA': initData }
+                });
+
+                if (res.status === 403) {
+                    document.getElementById('content').innerHTML = '❌ 權限不足';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.content) {
+                    currentFileContent = data.content;
+                    document.getElementById('content').innerHTML = marked.parse(preprocessObsidianEmbeds(data.content));
+                    renderMath();
+                    await renderMermaid();
+                    await renderObsidianEmbeddedMarkdown(path, initData, token);
+                    buildMarkdownOutline();
+                    document.getElementById('outline-btn').style.display = 'flex';
+                    document.getElementById('share-btn').style.display = 'flex';
+                    document.getElementById('voice-btn').style.display = 'flex';
+                    // Show edit button for markdown and json (allow Portal note editor to edit .json as plain text)
+                    try {
+                        const ext = (currentFileName.split('.').pop() || '').toLowerCase();
+                        if (ext === 'md' || ext === 'markdown' || ext === 'json' || ext === 'txt') {
+                            document.getElementById('edit-btn').style.display = 'flex';
+                        } else {
+                            document.getElementById('edit-btn').style.display = 'none';
+                        }
+                    } catch (e) { }
+
+                    trackFileAccess(path);
+
+                    // Prefer H1 title as browser tab title
+                    try {
+                        const h1 = document.querySelector('#content h1');
+                        const h1Text = h1 ? (h1.textContent || '').trim() : '';
+                        if (h1Text) document.title = `${h1Text} · ${currentFileName}`;
+                    } catch (e) {}
+                } else {
+                    document.getElementById('content').innerHTML = '❌ 無法讀取內容';
+                }
+            } catch (e) {
+                document.getElementById('content').innerHTML = '❌ 發生錯誤: ' + e.message;
+            }
+        }
+
+        // === Voice TTS ===
+        let voiceAudio = null;
+        let isPlaying = false;
+        let usingSpeechSynthesis = false;
+
+        function stripMarkdown(md) {
+            return md
+                .replace(/```[\s\S]*?```/g, '')       // code blocks
+                .replace(/`[^`]*`/g, '')               // inline code
+                .replace(/!\[.*?\]\(.*?\)/g, '')       // images
+                .replace(/\[([^\]]*)\]\(.*?\)/g, '$1') // links → text
+                .replace(/#{1,6}\s?/g, '')             // headers
+                .replace(/[*_~|>-]{1,3}/g, '')         // bold/italic/etc
+                .replace(/\|.*\|/g, '')                // tables
+                .replace(/\n{3,}/g, '\n\n')            // excess newlines
+                .trim();
+        }
+
+        function stopVoice() {
+            const label = document.getElementById('voice-label');
+            const btn = document.getElementById('voice-btn');
+            if (voiceAudio) {
+                voiceAudio.pause();
+                voiceAudio.currentTime = 0;
+                voiceAudio = null;
+            }
+            if (usingSpeechSynthesis) {
+                speechSynthesis.cancel();
+                usingSpeechSynthesis = false;
+            }
+            isPlaying = false;
+            if (label) label.textContent = '朗讀';
+            btn.style.background = '';
+        }
+
+        async function toggleVoice() {
+            if (isPlaying) {
+                stopVoice();
+                return;
+            }
+
+            if (!currentFileContent) return;
+
+            const btn = document.getElementById('voice-btn');
+            const label = document.getElementById('voice-label');
+
+            let text = stripMarkdown(currentFileContent);
+            if (text.length > 5000) text = text.substring(0, 5000) + '... 內容過長，僅朗讀前半部分。';
+
+            if (label) label.textContent = '載入中...';
+            btn.style.background = 'rgba(255,255,255,0.15)';
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                const tokenQs = token ? `?token=${encodeURIComponent(token)}` : '';
+
+                // Prefer voice-server (OpenAI TTS) via Portal proxy
+                const res = await fetch(`/api/voice-proxy/tts${tokenQs}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!res.ok) throw new Error('TTS failed: ' + res.status);
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                voiceAudio = new Audio(url);
+                voiceAudio.volume = 1.0;
+                await voiceAudio.play();
+                isPlaying = true;
+                if (label) label.textContent = '⏹ 停止';
+
+                voiceAudio.onended = () => {
+                    stopVoice();
+                    URL.revokeObjectURL(url);
+                };
+                voiceAudio.onerror = () => {
+                    stopVoice();
+                    URL.revokeObjectURL(url);
+                };
+            } catch (e) {
+                console.error('ElevenLabs TTS error, falling back to browser:', e);
+                const utterance = new SpeechSynthesisUtterance(text.substring(0, 2000));
+                utterance.lang = /[\u4e00-\u9fff]/.test(text) ? 'zh-TW' : 'en-US';
+                utterance.rate = 1.0;
+                speechSynthesis.speak(utterance);
+                usingSpeechSynthesis = true;
+                isPlaying = true;
+                if (label) label.textContent = '⏹ 停止';
+                utterance.onend = () => stopVoice();
+            }
+        }
+
+        // === File Access Tracking ===
+        async function trackFileAccess(filePath) {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token') || '';
+                await fetch(`/api/workspace/track-access?token=${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: filePath })
+                });
+            } catch (e) {
+                console.error('Track access error:', e);
+            }
+        }
+
+        // === Outline Drawer (Markdown headings + PDF outline) ===
+        function toggleOutline() {
+            const drawer = document.getElementById('outline-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            const isOpen = drawer.classList.contains('open');
+            if (isOpen) return closeOutline();
+
+            // Always (re)build outline on open to avoid "opened too early" empty state
+            try {
+                if ((currentFileName || '').toLowerCase().endsWith('.pdf') && typeof buildPdfOutline === 'function') {
+                    buildPdfOutline();
+                } else if (typeof buildMarkdownOutline === 'function') {
+                    buildMarkdownOutline();
+                }
+            } catch (e) {}
+
+            drawer.classList.add('open');
+            backdrop.classList.add('open');
+            drawer.setAttribute('aria-hidden', 'false');
+        }
+        function closeOutline() {
+            const drawer = document.getElementById('outline-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            drawer.classList.remove('open');
+            backdrop.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+        }
+        function setOutlineItems(items) {
+            const list = document.getElementById('outline-list');
+            if (!items || items.length === 0) {
+                list.innerHTML = `<div class="outline-empty">（此檔案沒有可用的章節導覽）</div>`;
+                return;
+            }
+            list.innerHTML = items.join('\n');
+        }
+
+        function esc(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[c]));
+        }
+
+        function slugify(text) {
+            return String(text || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[\s]+/g, '-')
+                .replace(/[^a-z0-9\u4e00-\u9fff\-]/g, '');
+        }
+
+        function buildMarkdownOutline() {
+            try {
+                const container = document.getElementById('content');
+
+                const allHeads = Array.from(container.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+
+                // Heuristic filters (TOC wants "real" structure, not page markers)
+                function isPageMarkerHeading(h) {
+                    const level = Number(h.tagName.slice(1));
+                    if (level !== 3) return false; // only filter H3 by default
+                    const txt = (h.textContent || '').trim();
+                    // Examples:
+                    // - 第 288 頁 (Page 288)
+                    // - 第288頁
+                    // - Page 288
+                    return /^第\s*\d+\s*頁/.test(txt) || /\(\s*Page\s*\d+\s*\)/i.test(txt) || /^Page\s*\d+\b/i.test(txt);
+                }
+
+                const heads = allHeads.filter(h => !isPageMarkerHeading(h));
+
+                // Debug: show heading count in drawer title
+                try {
+                    const t = document.querySelector('.drawer-title');
+                    if (t) t.textContent = `章節導覽 (H:${heads.length})`;
+                } catch (e) {}
+
+                if (!heads.length) {
+                    setOutlineItems([]);
+                    return;
+                }
+
+                // Ensure ids
+                const seen = new Map();
+                for (const h of heads) {
+                    if (!h.id) {
+                        let base = slugify(h.textContent) || 'section';
+                        const n = (seen.get(base) || 0) + 1;
+                        seen.set(base, n);
+                        h.id = n === 1 ? base : `${base}-${n}`;
+                    }
+                }
+
+                const items = heads.map(h => {
+                    const level = Number(h.tagName.slice(1));
+                    const cls = `outline-item outline-level-${Math.min(level,6)}`;
+                    const title = esc(h.textContent || '');
+                    return `<a class="${cls}" href="#${h.id}" onclick="event.preventDefault(); document.getElementById('${h.id}').scrollIntoView({behavior:'smooth', block:'start'}); closeOutline();">${title}</a>`;
+                });
+                setOutlineItems(items);
+            } catch (e) {
+                console.error('buildMarkdownOutline error:', e);
+            }
+        }
+
+        async function buildPdfOutline() {
+            try {
+                if (!pdfDoc) { setOutlineItems([]); return; }
+                const outline = await pdfDoc.getOutline();
+                if (!outline || outline.length === 0) { setOutlineItems([]); return; }
+
+                async function destToPageNum(dest) {
+                    let d = dest;
+                    if (!d) return null;
+                    if (typeof d === 'string') {
+                        d = await pdfDoc.getDestination(d);
+                    }
+                    if (!Array.isArray(d) || !d[0]) return null;
+                    const ref = d[0];
+                    try {
+                        const idx = await pdfDoc.getPageIndex(ref);
+                        return idx + 1;
+                    } catch {
+                        return null;
+                    }
+                }
+
+                async function walk(nodes, level) {
+                    const out = [];
+                    for (const n of nodes) {
+                        const page = await destToPageNum(n.dest);
+                        const indent = Math.min(level, 4);
+                        const cls = `outline-item outline-level-${indent}`;
+                        const title = esc(n.title || '');
+                        if (page) {
+                            out.push(`<a class="${cls}" href="#" onclick="event.preventDefault(); currentPage=${page}; renderCurrentPage(); window.scrollTo({top:0,behavior:'smooth'}); closeOutline();">${title}</a>`);
+                        } else {
+                            out.push(`<div class="${cls}" style="opacity:.7; cursor:default;">${title}</div>`);
+                        }
+                        if (n.items && n.items.length) {
+                            out.push(...await walk(n.items, level + 1));
+                        }
+                    }
+                    return out;
+                }
+
+                const items = await walk(outline, 1);
+                setOutlineItems(items);
+            } catch (e) {
+                console.error('buildPdfOutline error:', e);
+                setOutlineItems([]);
+            }
+        }
+
+        // Close drawer on ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeOutline();
+        });
+
+        fetchContent();
+    </script>
+</body>
+</html>

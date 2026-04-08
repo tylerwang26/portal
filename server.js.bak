@@ -83,15 +83,14 @@ app.use(function (err, req, res, next) {
     // log bad request details for debugging (non-sensitive)
     try {
       const fs = require('fs');
-      const line = `${new Date().toISOString()} BAD_JSON from ${req.ip} headers=${JSON.stringify(req.headers)}\n`;
+      const line = `${new Date().toISOString()} BAD_JSON from ${req.ip} headers=${JSON.stringify(req.headers)}
+`;
       fs.appendFileSync('/tmp/portal_bad_requests.log', line);
     } catch (e) { console.error('bad_json_log_failed', String(e)); }
     return res.status(400).json({ error: 'bad_json' });
   }
   next(err);
 });
-
-// --- i-chat routes enabled (restored) ---
 
 app.use(express.static(__dirname));
 // Local vendor assets (avoid CDN blocking in Telegram/WebViews)
@@ -225,7 +224,7 @@ app.post('/internal/webhook', (req, res) => {
     if (!message) return res.status(400).json({ error: 'no message' });
     // Append system message to obsidian vault i-chat file for UI consumption
     try {
-        const outPath = path.join(WORKSPACE, 'obsidian_vault/80_System/i-chat_system_messages.md');
+        const outPath = path.join(WORKSPACE, 'obsidian_vault/80_System/i-chat.md');
         const now = new Date().toISOString();
         const payload = `\n\n---\n\n**System message (${now})**\n\n${message}\n`;
         fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -314,15 +313,6 @@ app.post('/auth/login', (req, res) => {
 app.get('/auth/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/login');
-});
-
-// Auth status endpoint for frontend to check login state
-app.get('/api/auth/me', (req, res) => {
-    if (req.session && req.session.authenticated) {
-        res.json({ ok: true, authenticated: true, username: req.session.username });
-    } else {
-        res.json({ ok: true, authenticated: false });
-    }
 });
 
 app.get('/auth/webauthn/has-credential', (req, res) => {
@@ -486,12 +476,9 @@ function isMarketOpen(market) {
 // --- Fugle WebSocket Integration ---
 let fugleClient;
 let twWsActive = false;
-let twWsConnecting = false;
 
 async function initFugleWebSocket() {
     if (!FUGLE_API_KEY) return;
-    if (twWsConnecting) return;
-    twWsConnecting = true;
     try {
         if (fugleClient) {
             try { fugleClient.stock.disconnect(); } catch(e) {}
@@ -502,7 +489,6 @@ async function initFugleWebSocket() {
         stock.on('open', () => {
             console.log('[Fugle WS] Connected.');
             twWsActive = true;
-            twWsConnecting = false;
         });
         stock.on('message', (message) => {
             try {
@@ -511,47 +497,35 @@ async function initFugleWebSocket() {
                     const { symbol, price } = data.data;
                     if (price) updatePriceInState(symbol, price);
                 }
-            } catch (e) { console.error('[Fugle WS] message parse error', e?.message || e); }
+            } catch (e) {}
         });
         stock.on('error', (err) => {
             console.error('[Fugle WS] Error:', err);
             twWsActive = false;
-            twWsConnecting = false;
         });
         stock.on('close', () => {
             console.log('[Fugle WS] Closed.');
             twWsActive = false;
-            twWsConnecting = false;
         });
 
-        console.log('[Fugle WS] Connecting to Fugle WebSocket...');
         await stock.connect();
-        console.log('[Fugle WS] connect() promise resolved');
         
         const allItems = [...signalsState.competition, ...signalsState.longterm];
         const twSymbols = allItems.filter(i => /^\d{4,6}$/.test(i.symbol)).map(i => i.symbol);
-        twSymbols.forEach(symbol => {
-            try { stock.subscribe({ channel: 'trades', symbol }); }
-            catch (e) { console.error('[Fugle WS] subscribe failed for', symbol, e?.message || e); }
-        });
-        console.log('[Fugle WS] Subscribed to', twSymbols.length, 'symbols');
+        twSymbols.forEach(symbol => stock.subscribe({ channel: 'trades', symbol }));
 
     } catch (error) {
-        console.error('[Fugle WS] Init failed:', error.message || error);
+        console.error('[Fugle WS] Init failed:', error.message);
         twWsActive = false;
-        twWsConnecting = false;
     }
 }
 
 // --- Finnhub WebSocket Integration ---
 let finnhubWs;
 let usWsActive = false;
-let usWsConnecting = false;
 
 async function initFinnhubWebSocket() {
     if (!FINNHUB_API_KEY) return;
-    if (usWsConnecting) return;
-    usWsConnecting = true;
     try {
         if (finnhubWs) {
             try { finnhubWs.close(); } catch(e) {}
@@ -561,14 +535,11 @@ async function initFinnhubWebSocket() {
         finnhubWs.onopen = () => {
             console.log('[Finnhub WS] Connected.');
             usWsActive = true;
-            usWsConnecting = false;
             const allItems = [...signalsState.competition, ...signalsState.longterm];
             const usStocks = allItems.filter(i => isIndividualUSStock(i.symbol)).map(i => i.symbol);
             usStocks.forEach(symbol => {
-                try { finnhubWs.send(JSON.stringify({ type: 'subscribe', symbol })); }
-                catch (e) { console.error('[Finnhub WS] subscribe failed for', symbol, e?.message || e); }
+                finnhubWs.send(JSON.stringify({ type: 'subscribe', symbol }));
             });
-            console.log('[Finnhub WS] Subscribed to', usStocks.length, 'symbols');
         };
 
         finnhubWs.onmessage = (event) => {
@@ -580,27 +551,24 @@ async function initFinnhubWebSocket() {
                         updatePriceInState(symbol, price);
                     });
                 }
-            } catch (e) { console.error('[Finnhub WS] onmessage parse error', e?.message || e); }
+            } catch (e) {}
         };
 
         finnhubWs.onerror = (err) => {
-            console.error('[Finnhub WS] Error:', err?.message || err);
+            console.error('[Finnhub WS] Error:', err.message);
             usWsActive = false;
-            usWsConnecting = false;
         };
 
         finnhubWs.onclose = () => {
             console.log('[Finnhub WS] Closed.');
             usWsActive = false;
-            usWsConnecting = false;
             // Attempt reconnect in 10s
             setTimeout(initFinnhubWebSocket, 10000);
         };
 
     } catch (error) {
-        console.error('[Finnhub WS] Init failed:', error?.message || error);
+        console.error('[Finnhub WS] Init failed:', error.message);
         usWsActive = false;
-        usWsConnecting = false;
     }
 }
 
@@ -631,27 +599,9 @@ function updatePriceInState(symbol, price) {
 function tgAuth(req, res, next) {
     const initData = req.headers['x-tg-initdata'] || req.query.initData;
     const urlToken = req.query.token;
-
-    // Literal token auth (fallback for non-TG context)
-    if (urlToken === STATIC_TOKEN) {
-        // Generate compatible initData format for fallback
-        const fallbackInitData = new URLSearchParams();
-        fallbackInitData.set('user', JSON.stringify({
-            id: ALLOWED_USER_ID,
-            first_name: 'Tyler',
-            username: 'tylerty6592',
-            language_code: 'zh-TW'
-        }));
-        fallbackInitData.set('auth_date', Math.floor(Date.now() / 1000).toString());
-        fallbackInitData.set('query_id', Date.now().toString(36) + Math.random().toString(36).substring(2));
-        req.headers['x-tg-initdata'] = fallbackInitData.toString();
-        req.initData = fallbackInitData.toString();
-        return next();
-    }
-
+    if (urlToken === STATIC_TOKEN) return next();
     // Accept session auth
     if (req.session && req.session.authenticated) return next();
-
     if (!initData) return res.status(401).json({ error: 'Missing auth' });
     if (!BOT_TOKEN) return res.status(500).json({ error: 'Server auth misconfigured' });
     try {
@@ -737,63 +687,47 @@ async function refreshPrices(force = false) {
     const twOpen = isMarketOpen('TW');
     const usOpen = isMarketOpen('US');
 
-    const _syncStart = Date.now();
-    console.log(`[Portal] Sync Loop START (Force: ${force}, TW Open: ${twOpen}, US Open: ${usOpen}, US WS: ${usWsActive})`);
+    console.log(`[Portal] Sync Loop (Force: ${force}, TW Open: ${twOpen}, US Open: ${usOpen}, US WS: ${usWsActive})`);
 
     const allItems = [...signalsState.competition, ...signalsState.longterm];
 
     // 1. Process Taiwan Stocks
     const twItems = allItems.filter(i => /^\d{4,6}$/.test(i.symbol));
     if (twOpen || force) {
-        if (twOpen && !twWsActive && !force && !twWsConnecting) {
-            console.log('[Portal] TW WS not active; attempting initFugleWebSocket()');
-            initFugleWebSocket();
-        }
+        if (twOpen && !twWsActive && !force) initFugleWebSocket();
         await Promise.all(twItems.map(async (item) => {
-            try {
-                if (force || !twWsActive) {
-                    const price = await fetchFuglePrice(item.symbol);
-                    if (price) item.price = price.toString();
-                }
-                if (force || new Date().getMinutes() % 5 === 0) {
-                    const hist = await fetchFugleSparkline(item.symbol);
-                    if (hist.length) item.sparkline = hist;
-                }
-            } catch (e) {
-                console.error('[Portal] Error processing TW item', item.symbol, e?.message || e);
+            if (force || !twWsActive) {
+                const price = await fetchFuglePrice(item.symbol);
+                if (price) item.price = price.toString();
+            }
+            if (force || new Date().getMinutes() % 5 === 0) {
+                const hist = await fetchFugleSparkline(item.symbol);
+                if (hist.length) item.sparkline = hist;
             }
         }));
     }
 
     // 2. Process US Stocks (Hybrid Logic)
     if (usOpen || force) {
-        if (usOpen && !usWsActive && !force) {
-            console.log('[Portal] US WS not active; attempting initFinnhubWebSocket()');
-            initFinnhubWebSocket();
-        }
+        if (usOpen && !usWsActive && !force) initFinnhubWebSocket();
         const usItems = allItems.filter(i => /^[A-Z^=]+$/.test(i.symbol));
         
         // Symbols that MUST use REST (Indices, Futures, or if WS is down)
         const restSymbols = usItems.filter(i => force || !usWsActive || !isIndividualUSStock(i.symbol)).map(i => i.symbol);
 
         if (restSymbols.length > 0) {
-            try {
-                const usData = await fetchUSData(restSymbols);
-                usItems.forEach(item => {
-                    const d = usData[item.symbol];
-                    if (d) {
-                        if (d.price) item.price = d.price;
-                        if (d.change) item.change = d.change;
-                        if (d.pc) item.pc = d.pc; // Store prevClose for WS calculations
-                    }
-                });
-            } catch (e) {
-                console.error('[Portal] Error fetching US data for restSymbols', e?.message || e);
-            }
+            const usData = await fetchUSData(restSymbols);
+            usItems.forEach(item => {
+                const d = usData[item.symbol];
+                if (d) {
+                    if (d.price) item.price = d.price;
+                    if (d.change) item.change = d.change;
+                    if (d.pc) item.pc = d.pc; // Store prevClose for WS calculations
+                }
+            });
         }
     }
     signalsState.updatedAt = new Date().toISOString();
-    console.log(`[Portal] Sync Loop DONE (took ${Date.now() - _syncStart}ms)`);
 }
 
 async function initSignals() {
@@ -804,8 +738,8 @@ async function initSignals() {
             signalsState.competition = data.competition || [];
             signalsState.longterm = data.longterm || [];
             await refreshPrices(true);
-            if (isMarketOpen('TW') && !twWsConnecting) initFugleWebSocket();
-            if (isMarketOpen('US') && !usWsConnecting) initFinnhubWebSocket();
+            if (isMarketOpen('TW')) initFugleWebSocket();
+            if (isMarketOpen('US')) initFinnhubWebSocket();
         }
     } catch (e) {}
 }
@@ -1004,16 +938,7 @@ app.get('/api/workspace/list', tgAuth, (req, res) => {
         const files = fs.readdirSync(targetPath).map(name => {
             const fpath = path.join(targetPath, name);
             const st = fs.statSync(fpath);
-            return {
-                name,
-                isFile: st.isFile(),
-                isDirectory: st.isDirectory(),
-                path: reqPath ? reqPath + '/' + name : name,
-                size: st.size,
-                // provide numeric ms timestamps for robust sorting in the frontend
-                mtime: Number(st.mtimeMs || st.mtime || Date.parse(st.mtime) || 0),
-                ctime: Number(st.ctimeMs || st.ctime || Date.parse(st.ctime) || 0)
-            };
+            return { name, isFile: st.isFile(), isDirectory: st.isDirectory(), path: reqPath ? reqPath + '/' + name : name };
         });
         res.json({ list: files, currentPath: reqPath });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1059,45 +984,19 @@ app.get('/api/office/preview', tgAuth, (req, res) => {
 });
 
 // SECURE API: Save text content (used by Notes editor)
-// Modified: allow .json editing under obsidian_vault/, with per-save timestamped backups
 app.post('/api/workspace/save', tgAuth, express.json({ limit: '2mb' }), (req, res) => {
     const reqPath = (req.body && req.body.path) ? String(req.body.path) : '';
     const content = (req.body && typeof req.body.content === 'string') ? req.body.content : null;
     if (!reqPath) return res.status(400).json({ error: 'Missing path' });
     if (content === null) return res.status(400).json({ error: 'Missing content' });
 
-    // Security: only allow editing within obsidian_vault (relative path)
-    const rel = reqPath.replace(/\\\\/g, '/'); // normalize
-    if (!rel.startsWith('obsidian_vault/')) return res.status(403).json({ error: 'Editing restricted to obsidian_vault' });
-
-    // Only permit .md and .json files to be saved via this endpoint
-    const ext = path.extname(rel).toLowerCase();
-    if (!['.md', '.markdown', '.json', '.txt'].includes(ext)) return res.status(400).json({ error: 'Unsupported file type' });
-
-    const targetPath = path.join(WORKSPACE, rel);
+    const targetPath = path.join(WORKSPACE, reqPath);
     if (!targetPath.startsWith(WORKSPACE)) return res.status(403).json({ error: 'Access denied' });
 
     try {
-        // Create backup dir and copy existing file (if any)
-        const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupDir = path.join(WORKSPACE, 'backups', 'portal_edits', ts);
-        fs.mkdirSync(backupDir, { recursive: true });
-        if (fs.existsSync(targetPath)) {
-            const relBackupPath = path.join(backupDir, rel);
-            fs.mkdirSync(path.dirname(relBackupPath), { recursive: true });
-            fs.copyFileSync(targetPath, relBackupPath);
-        }
-
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });
         fs.writeFileSync(targetPath, content, 'utf-8');
-
-        // Preserve file mode where possible (best-effort)
-        try {
-            const st = fs.statSync(targetPath);
-            fs.chmodSync(targetPath, st.mode);
-        } catch (e) { /* ignore */ }
-
-        res.json({ ok: true, path: rel, bytes: Buffer.byteLength(content, 'utf-8'), backup: fs.existsSync(path.join(backupDir, rel)) });
+        res.json({ ok: true, path: reqPath, bytes: Buffer.byteLength(content, 'utf-8') });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -1573,11 +1472,6 @@ app.get('/api/workspace/raw', requireAuth, (req, res) => {
         if (accept.includes('text/html') && String(req.query.embed || '') !== '1') {
             const qs = new URLSearchParams(req.query);
             return res.redirect(302, `/pdf?${qs.toString()}`);
-        }
-
-        // Ensure file exists before setting PDF headers to avoid leaking PDF headers on 404
-        if (!fs.existsSync(targetPath)) {
-            return res.status(404).send('Not found');
         }
 
         // Force correct PDF headers for native viewer (Telegram WebView otherwise may render as text or hang)
@@ -3023,7 +2917,7 @@ app.post('/api/i-chat/stream', requireAuth, express.json({ limit: '256kb' }), as
 
         const key = iChatKey(req);
         ICHAT_STATE.set(key, { text: '', done: false, updatedAt: Date.now() });
-        appendIChatHistory(key, { ts: new Date().toISOString(), role: 'me', source: 'portal-i-chat', text: message });
+        appendIChatHistory(key, { ts: new Date().toISOString(), role: 'me', source: 'portal/i-chat', text: message });
 
         const { spawn } = await import('child_process');
 
@@ -3362,45 +3256,5 @@ starOfficePaths.forEach(p => {
 
 // Bind on IPv6 "::" so checks to http://localhost:<port> (often ::1) don't hang.
 // On most Linux setups this also accepts IPv4 via v4-mapped addresses.
-
-// ===== Stocks App Integration =====
-app.use('/stocks', express.static(path.join(__dirname, 'stocks-dist')));
-app.get('/stocks', (req, res) => res.sendFile(path.join(__dirname, 'stocks-dist', 'index.html')));
-
-// ===== Obsidian Vault Integration =====
-app.get('/vault/*', (req, res) => {
-    const filePath = path.join(WORKSPACE, 'obsidian_vault', req.params[0]);
-    if (!filePath.startsWith(path.join(WORKSPACE, 'obsidian_vault'))) {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-    fs.stat(filePath, (err, stats) => {
-        if (err) return res.status(404).json({ error: 'Not found' });
-        if (stats.isDirectory()) {
-            fs.readdir(filePath, (err, files) => {
-                if (err) return res.status(500).json({ error: 'Cannot read directory' });
-                res.json({ type: 'directory', files: files });
-            });
-        } else if (filePath.endsWith('.md')) {
-            res.sendFile(filePath);
-        } else {
-            res.status(400).json({ error: 'Only markdown files are supported' });
-        }
-    });
-});
-
-app.get('/api/vault/structure', (req, res) => {
-    const vaultPath = path.join(WORKSPACE, 'obsidian_vault');
-    function getStructure(dir, prefix = '') {
-        try {
-            const files = fs.readdirSync(dir);
-            return files.map(file => {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
-                return { name: file, type: stat.isDirectory() ? 'directory' : 'file', path: prefix ? `${prefix}/${file}` : file };
-            });
-        } catch (e) { return []; }
-    }
-    res.json({ structure: getStructure(vaultPath) });
-});
 app.listen(PORT, '::', () => console.log(`Portal server running on port ${PORT}`));
 app.get('/canvas', (req, res) => res.sendFile(path.join(__dirname, 'canvas.html')));

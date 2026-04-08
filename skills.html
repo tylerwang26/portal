@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🧠 Skills</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    body { background: var(--c-bg); color: var(--c-text); font-family: var(--font-sans); margin: 0; padding: var(--space-4); padding-top: calc(var(--space-4) + var(--safe-t)); }
+    .header { display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: var(--space-4); }
+    .header h1 { font-size: 18px; margin: 0; color: var(--c-accent); }
+    .btn { appearance: none; border: var(--bd-1); background: rgba(255,255,255,0.04); color: var(--c-text); padding: 8px 12px; border-radius: 10px; font-size: 14px; text-decoration: none; }
+    .section-title { margin-top: 18px; margin-bottom: 10px; font-weight: 700; color: var(--c-text); }
+    .list { background: var(--c-surface); border-radius: var(--r-lg); border: var(--bd-1); overflow: hidden; }
+    .list a { display:flex; align-items:center; padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--c-text); text-decoration:none; }
+    .list a:last-child { border-bottom: none; }
+    .le { width: 26px; margin-right: 10px; text-align:center; }
+    .lt { flex: 1; font-size: 14px; }
+    .la { opacity: 0.6; }
+    .footer { margin-top: 18px; opacity: 0.6; font-size: 12px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧠 Skills</h1>
+    <a class="btn" href="/" title="回首頁"><img src="/assets/icons/house.png" style="width:18px;height:18px;" alt="回首頁"></a>
+  </div>
+
+  <div class="section-title">📈 交易與策略</div>
+  <div class="list">
+    <a href="/viewer?path=skills/mbs-strategy/SKILL.md"><div class="le">🎮</div><div class="lt">MBS 商業模擬策略</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/chained-deduction-kg/SKILL.md"><div class="le">🔗</div><div class="lt">知識圖譜連鎖推演</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/equity-analysis-pro/SKILL.md"><div class="le">💎</div><div class="lt">專業權益分析</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/qullamaggie-breakout/SKILL.md"><div class="le">🚀</div><div class="lt">Qullamaggie 突破回測</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/short-selling-tactics/SKILL.md"><div class="le">🐻</div><div class="lt">多空混合策略</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/predict-markets/SKILL.md"><div class="le">🎯</div><div class="lt">預測市場交易</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/sentiment-risk-radar/SKILL.md"><div class="le">🧭</div><div class="lt">輿情風險雷達（GEMS × 8 產業群）</div><div class="la">→</div></a>
+    <a href="/viewer?path=agents/dexter/AGENTS.md"><div class="le">💰</div><div class="lt">小f Dexter 財務稽核</div><div class="la">→</div></a>
+  </div>
+
+  <div class="section-title">📖 學術</div>
+  <div class="list">
+    <a href="/viewer?path=skills/academic-translator/SKILL.md"><div class="le">🌐</div><div class="lt">學術論文英翻中</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/homework-report/SKILL.md"><div class="le">📝</div><div class="lt">長庚大學作業報告</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/public/claude-volatility-drag/SKILL.md"><div class="le">📈</div><div class="lt">Volatility Drag（Claude 詳盡版：GBM + Itô）</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/recording-to-notes/SKILL.md"><div class="le">🎙️</div><div class="lt">錄音轉筆記（Recording → Notes）</div><div class="la">→</div></a>
+    <a href="/viewer?path=skills/office-converter/SKILL.md"><div class="le">📄</div><div class="lt">Office 文件轉 Markdown</div><div class="la">→</div></a>
+  </div>
+
+  <div class="section-title">🎬 媒體與下載</div>
+  <div class="list">
+    <a href="/viewer?path=skills/yt-downloader/SKILL.md"><div class="le">📥</div><div class="lt">YouTube 下載器</div><div class="la">→</div></a>
+    <a href="/voicetalk"><div class="le">🗣️</div><div class="lt">語音對話 VoiceTalk</div><div class="la">→</div></a>
+    <a href="/canvas"><div class="le">🎨</div><div class="lt">Canvas 即時畫布</div><div class="la">→</div></a>
+    <a href="/maps"><div class="le">🗺️</div><div class="lt">Maps 地圖查詢</div><div class="la">→</div></a>
+  </div>
+
+  <div class="section-title">🔧 系統與工具</div>
+  <div class="list">
+    <a href="/viewer?path=MEMORY.md"><div class="le">🧠</div><div class="lt">核心記憶 MEMORY.md</div><div class="la">→</div></a>
+    <a href="/viewer?path=SOUL.md"><div class="le">👻</div><div class="lt">靈魂 SOUL.md</div><div class="la">→</div></a>
+    <a href="/viewer?path=AGENTS.md"><div class="le">⚙️</div><div class="lt">代理設定 AGENTS.md</div><div class="la">→</div></a>
+    <a href="/system-dashboard.html"><div class="le">🧰</div><div class="lt">系統 Dashboard（Cron / Signals / Skills）</div><div class="la">→</div></a>
+    <a href="https://dash.cloudflare.com/8b6c55d0cc43cef35d1e543435ade8c3/r2/default/buckets/twai" target="_blank" rel="noopener"><div class="le">☁️</div><div class="lt">Cloudflare R2</div><div class="la">↗</div></a>
+    <a href="https://zeabur.com/projects/698f49e667b6b3d512139d82/services/69a76cc4ebec607bb566fdb2?envID=698f49e60568457b6d44709d" target="_blank" rel="noopener"><div class="le">🚀</div><div class="lt">Zeabur</div><div class="la">↗</div></a>
+    <a href="/office/" ><div class="le">🏢</div><div class="lt">Star Office</div><div class="la">→</div></a>
+    <a href="https://us.cloud.langfuse.com/project/cmmgawctm00eyad06u27jb9h0" target="_blank" rel="noopener"><div class="le">📊</div><div class="lt">Langfuse Dashboard</div><div class="la">↗</div></a>
+    <a href="/viewer?path=skills/backup-manager/SKILL.md"><div class="le">📦</div><div class="lt">backup-manager（打包→R2→驗證→Log）</div><div class="la">→</div></a>
+    <a href="/claude-scientific-skills.html"><div class="le">🧪</div><div class="lt">Claude Scientific Skills（170+）</div><div class="la">→</div></a>
+    <a href="https://huggingface.co/spaces/twinkle-ai/tw-eval-leaderboard" target="_blank" rel="noopener"><div class="le">🏆</div><div class="lt">TW-Eval Leaderboard（Twinkle）</div><div class="la">↗</div></a>
+  </div>
+
+  <div class="section-title">🕒 定時任務 (Cron Jobs)</div>
+  <div class="list">
+    <a href="#"><div class="le">🔧</div><div class="lt">每日 03:00 /mb 維護（含內容檢視）</div><div class="la">03:00</div></a>
+    <a href="#"><div class="le">🛡️</div><div class="lt">每日 03:50 資安稽核</div><div class="la">03:50</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 06:10 美股收盤報</div><div class="la">06:10</div></a>
+    <a href="/viewer?path=obsidian_vault/30_Fox_Trading/Research/Sentiment_Risk_Radar.md"><div class="le">🧭</div><div class="lt">每日 07:00 輿情風險雷達</div><div class="la">07:00</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 08:00 台股盤前報</div><div class="la">08:00</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 09:00 台股開盤快訊</div><div class="la">09:00</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 14:00 台股收盤報</div><div class="la">14:00</div></a>
+    <a href="/viewer?path=obsidian_vault/30_Fox_Trading/Strategies/%E3%80%90%E5%A4%9A%E3%80%91KD%E5%A4%9A%E6%99%82%E6%A1%86_RSI%E9%81%8E%E6%BF%BE_%E9%81%B8%E8%82%A1%E8%88%87%E4%BA%A4%E6%98%93%E6%97%A5%E8%AA%8C.md"><div class="le">📈</div><div class="lt">每日 16:30 KD+RSI 選股檢查</div><div class="la">16:30</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 20:00 美股盤前報</div><div class="la">20:00</div></a>
+    <a href="#"><div class="le">📈</div><div class="lt">每日 21:00 美股開盤快訊</div><div class="la">21:00</div></a>
+  </div>
+
+  <div class="footer">🦊 Fox Fleet Portal · Skills</div>
+</body>
+</html>

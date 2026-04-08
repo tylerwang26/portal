@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🧪 Skills</title>
+  <link rel="stylesheet" href="/tokens.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--c-bg, #0d1117); color: var(--c-text, #e6edf3); font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); min-height: 100vh; }
+
+    .topbar { display:flex; align-items:center; gap:10px; margin-bottom: 10px; }
+    .back { text-decoration:none; color:#8b949e; font-weight:700; }
+    .h1 { font-size: 16px; font-weight: 900; color:#fff; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pill { font-size: 11px; color:#8b949e; border:1px solid #30363d; padding: 6px 10px; border-radius: 999px; }
+
+    .sub { font-size: 12px; color:#8b949e; line-height:1.45; margin-bottom: 12px; }
+
+    .toolbar { display:flex; gap:8px; margin: 10px 0 14px; }
+    input[type="search"] { flex: 1; background:#0b0f14; color:#e6edf3; border:1px solid #30363d; border-radius:10px; padding: 10px 12px; outline:none; }
+
+    .list { background:#161b22; border:1px solid #30363d; border-radius:12px; overflow:hidden; }
+    .row { display:flex; gap:12px; padding: 12px 14px; border-bottom:1px solid #21262d; cursor:pointer; }
+    .row:last-child { border-bottom:none; }
+    .row:active { background: rgba(255,255,255,0.04); }
+
+    .mark { font-size: 16px; width: 22px; text-align:center; margin-top: 1px; }
+    .main { flex:1; min-width:0; }
+    .name { font-size: 13px; font-weight: 900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .id { font-size: 11px; color:#8b949e; margin-top: 2px; }
+    .desc { font-size: 12px; color:#c9d1d9; margin-top: 6px; line-height: 1.35; }
+
+    .hint { font-size: 11px; color:#8b949e; margin-top: 14px; line-height:1.4; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" id="back" href="#" title="回上一頁"><img src="/assets/icons/back.png" style="width:20px;height:20px;" alt="回上一頁"></a>
+    <div class="h1" id="title">載入中…</div>
+    <div class="pill" id="count">…</div>
+  </div>
+
+  <div class="sub">點選一列即可安裝。已安裝顯示 ✅，未安裝顯示 🔲（不提供解除安裝按鈕，避免誤刪）。</div>
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="搜尋 skill（名稱 / id / 說明）" />
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="hint">安裝會把 skill 複製到 <code>workspace/skills/</code>。安裝後 Portal/Skill Explorer 重新整理即可看到。</div>
+
+<script>
+  const qs = new URLSearchParams(location.search);
+  const domain = qs.get('domain') || '';
+  const token = qs.get('token') || '';
+  const initData = qs.get('initData') || '';
+  const withAuth = (url) => {
+    let u = url;
+    if (token) u = `${u}${u.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    if (initData) u = `${u}${u.includes('?') ? '&' : '?'}initData=${encodeURIComponent(initData)}`;
+    return u;
+  };
+
+  document.getElementById('back').href = withAuth('/claude-scientific-skills.html');
+
+  function getInitData() {
+    const qs = new URLSearchParams(location.search);
+    return qs.get('initData') || '';
+  }
+
+  async function apiFetch(url, opts={}) {
+    const initData = getInitData();
+    const extraHeaders = initData ? { 'X-TG-INITDATA': initData } : {};
+    const res = await fetch(withAuth(url), {
+      ...opts,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...extraHeaders, ...(opts.headers||{}) }
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function esc(s){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  }
+
+  let all = [];
+
+  function render() {
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const listEl = document.getElementById('list');
+
+    const filtered = q ? all.filter(s =>
+      (s.id||'').toLowerCase().includes(q) ||
+      (s.name||'').toLowerCase().includes(q) ||
+      (s.desc_zh||'').toLowerCase().includes(q) ||
+      (s.desc_en||'').toLowerCase().includes(q)
+    ) : all;
+
+    document.getElementById('count').textContent = `${filtered.length}`;
+
+    listEl.innerHTML = '';
+    for (const s of filtered) {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.dataset.id = s.id;
+
+      const mark = document.createElement('div');
+      mark.className = 'mark';
+      mark.textContent = s.installed ? '✅' : '🔲';
+
+      const main = document.createElement('div');
+      main.className = 'main';
+      main.innerHTML = `
+        <div class="name">${esc(s.id)}</div>
+        <div class="desc">${esc(s.desc_zh || s.desc_en || '')}</div>
+      `;
+
+      row.appendChild(mark);
+      row.appendChild(main);
+
+      row.onclick = async () => {
+        if (s.installed) return; // no-op
+        mark.textContent = '⏳';
+        try {
+          await apiFetch('/api/kdense/install', { method:'POST', body: JSON.stringify({ id: s.id }) });
+          s.installed = true;
+          mark.textContent = '✅';
+        } catch (e) {
+          mark.textContent = '🔲';
+          alert('安裝失敗：' + e.message);
+        }
+      };
+
+      listEl.appendChild(row);
+    }
+  }
+
+  async function main() {
+    document.getElementById('title').textContent = domain || 'Skills';
+
+    const data = await apiFetch('/api/kdense/skills');
+    const skills = data.skills || [];
+    all = skills.filter(s => (s.domain || '') === domain);
+    all.sort((a,b) => (a.id||'').localeCompare(b.id||''));
+    render();
+  }
+
+  document.getElementById('q').oninput = render;
+
+  main().catch(e => {
+    document.getElementById('title').textContent = '載入失敗';
+    document.getElementById('list').innerHTML = `<div style="padding:14px 16px;color:#8b949e;">載入失敗：${esc(e.message)}</div>`;
+  });
+</script>
+</body>
+</html>
