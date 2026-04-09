@@ -11,15 +11,14 @@ LABEL description="靈狐 Portal - Portfolio Tracker"
 ENV NODE_ENV=production
 WORKDIR /app
 
-# 複製 package tied（減少構建時間）
-COPY package.json package-lock.json ./
+# 複製 package（減少構建時間）
+COPY package.json ./
 
 # 安裝依賴
-RUN npm ci --only=production --no-optional
+RUN npm install --omit=dev --no-optional
 
-# 復製應用程式程式碼
-COPY server.js ./
-COPY .env.production ./
+# 復製所有應用程式檔案（HTML, assets, public, etc.）
+COPY . .
 
 # 設定入口點
 ENTRYPOINT ["node", "server.js"]
