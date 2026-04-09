@@ -12,8 +12,8 @@
 | 0 | memory-ops | tylerwang26/memory-ops | service-69956d0646ce828f10f1582f | memory-ops.zeabur.internal:8080 | ✅ 本機 repo 完成 |
 | 1 | twai (OpenClaw AI) | tylerwang26/twai | service-69d36f3d93577fe0061de61d | openclaw-twai.zeabur.internal:18789 | ⏳ 尚未初始化 |
 | 2 | Portl (Portal) | tylerwang26/Portl | service-69d601259da252559b38d61a | portal.zeabur.internal:8080 | ✅ i-chat 已移除 |
-| 3 | Stock | tylerwang26/Stock | service-69d49e84327f44a3cdec287f | i-stock.zeabur.internal:8080 | ⏳ 尚未初始化 |
-| 4 | Explorer (前 Worker) | tylerwang26/fileexplorer | 待建立 | 待建立 | ⏳ 尚未初始化 |
+| 3 | Stock | tylerwang26/i-stock | service-69d49e84327f44a3cdec287f | i-stock.zeabur.internal:8080 | ✅ 本機 repo 完成 |
+| 4 | Explorer (前 Worker) | tylerwang26/fileexplorer | 待建立 | 待建立 | ✅ 本機 repo 完成 |
 | 5 | i-Chat | tylerwang26/i-chat | 待建立 | 待建立 | ✅ 本機 repo 完成 |
 
 ---
@@ -90,9 +90,9 @@
 ### #3 Stock
 
 - 角色: 市場數據 + 交易信號
-- GitHub: tylerwang26/Stock
-- Zeabur ID: service-69d49e84327f44a3cdec287f
-- 狀態: ⏳ 尚未設置
+- GitHub: `tylerwang26/i-stock`
+- Service ID: `service-69d49e84327f44a3cdec287f`
+- Internal: `i-stock.zeabur.internal:8080`
 
 ---
 
