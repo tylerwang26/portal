@@ -41,6 +41,9 @@ function loadAuthDB() {
 }
 function saveAuthDB(db) { fs.writeFileSync(AUTH_DB_PATH, JSON.stringify(db, null, 2)); }
 
+// Ensure workspace directory exists (critical for fresh containers)
+fs.mkdirSync(WORKSPACE, { recursive: true });
+
 // Initialize default user if not exists
 (function initAuth() {
     const db = loadAuthDB();
