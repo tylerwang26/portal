@@ -1919,9 +1919,12 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
     };
 
     const getIcloudUpcoming = async (days) => {
-        const user = readSecret(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'));
-        const pw = readSecret(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt'));
-        if (!user || !pw) throw new Error('Missing iCloud credentials in workspace secrets');
+        // Prefer env vars (cloud-native), fall back to workspace secret files
+        const user = process.env.ICLOUD_USERNAME
+            || readSecret(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'));
+        const pw = process.env.ICLOUD_APP_PASSWORD
+            || readSecret(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt'));
+        if (!user || !pw) throw new Error('Missing iCloud credentials (set ICLOUD_USERNAME + ICLOUD_APP_PASSWORD env vars)');
 
         const auth = basicAuth(user, pw);
         const xmlParser = new XMLParser({
@@ -2205,9 +2208,10 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
     try {
         const days = Math.max(1, Math.min(14, parseInt(String(req.query.days || '3'), 10) || 3));
 
-        // Prefer iCloud if configured (secrets/icloud_username.txt + secrets/icloud_app_password.txt)
-        const hasIcloudSecrets = fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'))
-            && fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt'));
+        // Prefer iCloud if configured via env vars or secret files
+        const hasIcloudSecrets = (process.env.ICLOUD_USERNAME && process.env.ICLOUD_APP_PASSWORD)
+            || (fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'))
+                && fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt')));
 
         const payload = hasIcloudSecrets
             ? await getIcloudUpcoming(days)
