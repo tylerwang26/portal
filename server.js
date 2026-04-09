@@ -1933,21 +1933,34 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
             removeNSPrefix: true,
         });
 
+        // Manually follow redirects to preserve Authorization header.
+        // Node.js fetch (undici) strips Authorization on cross-origin redirects,
+        // which breaks iCloud CalDAV (caldav.icloud.com → p##-caldav.icloud.com).
         const caldavFetch = async (url, { method = 'PROPFIND', depth = '0', body = '' } = {}) => {
-            const r = await fetch(url, {
-                method,
-                headers: {
-                    Authorization: auth,
-                    Depth: depth,
-                    'Content-Type': 'application/xml; charset=utf-8',
-                },
-                body,
-            });
-            const text = await r.text();
-            if (!r.ok) {
-                throw new Error(`CalDAV ${method} failed (${r.status})`);
+            const headers = {
+                Authorization: auth,
+                Depth: depth,
+                'Content-Type': 'application/xml; charset=utf-8',
+            };
+            let currentUrl = url;
+            for (let redirects = 0; redirects < 6; redirects++) {
+                const r = await fetch(currentUrl, {
+                    method,
+                    headers,
+                    body: body || undefined,
+                    redirect: 'manual',
+                });
+                if (r.status >= 300 && r.status < 400) {
+                    const loc = r.headers.get('location');
+                    if (!loc) throw new Error(`CalDAV redirect with no Location header (${r.status})`);
+                    currentUrl = new URL(loc, currentUrl).toString();
+                    continue;
+                }
+                const text = await r.text();
+                if (!r.ok) throw new Error(`CalDAV ${method} failed (${r.status})`);
+                return text;
             }
-            return text;
+            throw new Error('Too many CalDAV redirects');
         };
 
         // 1) discover principal
