@@ -91,8 +91,6 @@ app.use(function (err, req, res, next) {
   next(err);
 });
 
-// --- i-chat routes enabled (restored) ---
-
 app.use(express.static(__dirname));
 // Local vendor assets (avoid CDN blocking in Telegram/WebViews)
 app.use('/vendor/katex', express.static(path.join(__dirname, 'node_modules', 'katex', 'dist')));
@@ -216,21 +214,21 @@ function saveGoogleToken(t) {
 }
 
 // --- Internal webhook for system messages ---
-// Usage: POST /internal/webhook with JSON { "key": "<STATIC_PORTAL_TOKEN>", "channel": "i-chat", "message": "..." }
+// Usage: POST /internal/webhook with JSON { "key": "<STATIC_PORTAL_TOKEN>", "channel": "system", "message": "..." }
 app.post('/internal/webhook', (req, res) => {
     const key = req.body?.key || req.headers['x-portal-token'];
     if (key !== STATIC_TOKEN) return res.status(403).json({ error: 'forbidden' });
-    const channel = req.body.channel || req.query.channel || 'i-chat';
+    const channel = req.body.channel || req.query.channel || 'system';
     const message = req.body.message || req.body.text || '';
     if (!message) return res.status(400).json({ error: 'no message' });
-    // Append system message to obsidian vault i-chat file for UI consumption
+    // Log system message to workspace logs
     try {
-        const outPath = path.join(WORKSPACE, 'obsidian_vault/80_System/i-chat_system_messages.md');
+        const outPath = path.join(WORKSPACE, 'logs/portal_webhook.log');
         const now = new Date().toISOString();
-        const payload = `\n\n---\n\n**System message (${now})**\n\n${message}\n`;
+        const payload = `${now} [${channel}] ${message}\n`;
         fs.mkdirSync(path.dirname(outPath), { recursive: true });
         fs.appendFileSync(outPath, payload);
-        return res.json({ ok: true, written: outPath });
+        return res.json({ ok: true, channel, written: outPath });
     } catch (e) {
         return res.status(500).json({ error: String(e) });
     }
@@ -2774,316 +2772,8 @@ app.get('/favorites', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'favorites.html'));
 });
 
-// --- i-chat (simple chat UI) ---
-// Keep the latest assistant output in memory so a browser refresh can continue from the last state.
-// Keyed by sessionID (web) or token (legacy) best-effort.
-const ICHAT_STATE = new Map(); // key -> { text, done, updatedAt }
-const ICHAT_HISTORY_DIR = path.join(WORKSPACE, 'portal_i_chat_history');
-try { fs.mkdirSync(ICHAT_HISTORY_DIR, { recursive: true }); } catch { }
+// i-chat has been extracted to Service #5 (github.com/tylerwang26/i-chat)
 
-function iChatKey(req) {
-    return req.sessionID || req.query.token || req.headers['x-portal-token'] || 'anon';
-}
-
-function iChatHistoryFile(key) {
-    const safe = String(key || 'anon').replace(/[^a-zA-Z0-9._-]/g, '_');
-    return path.join(ICHAT_HISTORY_DIR, `${safe}.jsonl`);
-}
-
-function appendIChatHistory(key, item) {
-    try {
-        const f = iChatHistoryFile(key);
-        fs.appendFileSync(f, JSON.stringify(item) + '\n');
-    } catch { }
-}
-
-// i-chat page (simple chat UI)
-app.get('/i-chat', requireAuth, (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
-    res.sendFile(path.join(__dirname, 'i-chat.html'));
-});
-
-// i-chat state: allow client to resume after refresh
-app.get('/api/i-chat/state', requireAuth, (req, res) => {
-    const key = iChatKey(req);
-    const st = ICHAT_STATE.get(key) || null;
-    res.setHeader('Cache-Control', 'no-store');
-    res.json({ ok: true, state: st });
-});
-
-// i-chat history (persisted): survives refresh + re-login
-app.get('/api/i-chat/history', requireAuth, (req, res) => {
-    try {
-        const key = iChatKey(req);
-        const limit = Math.max(1, Math.min(1000, Number(req.query.limit || 120)));
-        const f = iChatHistoryFile(key);
-        if (!fs.existsSync(f)) return res.json({ ok: true, items: [] });
-        const raw = fs.readFileSync(f, 'utf-8');
-        const lines = raw.split(/\r?\n/).filter(Boolean);
-        const tail = lines.slice(-limit);
-        const items = [];
-        for (const ln of tail) {
-            try { items.push(JSON.parse(ln)); } catch { }
-        }
-        res.setHeader('Cache-Control', 'no-store');
-        res.json({ ok: true, items });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-    }
-});
-
-// i-chat external feeds: telegram + discord DM (only Tyler) - last N days
-app.get('/api/i-chat/external_feeds', requireAuth, async (req, res) => {
-    try {
-        const days = Math.max(1, Math.min(30, Number(req.query.days || 2)));
-        const sinceTs = Date.now() - days * 24 * 60 * 60 * 1000;
-        const items = [];
-
-        // 1) Telegram local log (if exists)
-        try {
-            const tgLog = path.join(WORKSPACE, 'portal_telegram.log');
-            if (fs.existsSync(tgLog)) {
-                const lines = fs.readFileSync(tgLog, 'utf-8').split(/\r?\n/).filter(Boolean);
-                for (const ln of lines) {
-                    try {
-                        const obj = JSON.parse(ln);
-                        // Expect obj = { ts, from_id, to_id, text, direction }
-                        if (!obj || !obj.ts) continue;
-                        const t = Date.parse(obj.ts) || Number(obj.ts) || 0;
-                        if (t < sinceTs) continue;
-                        // Only Tyler's DM (either from or to matches ALLOWED_USER_ID) and direction == 'dm'
-                        if ((obj.from_id === ALLOWED_USER_ID || obj.to_id === ALLOWED_USER_ID) && obj.direction === 'dm') {
-                            items.push({ ts: new Date(t).toISOString(), role: obj.from_id === ALLOWED_USER_ID ? 'me' : 'ai', text: obj.text || '', source: 'telegram', meta: { messageId: obj.message_id } });
-                        }
-                    } catch { }
-                }
-            }
-        } catch (e) { /* ignore telegram read errors */ }
-
-        // 2) Discord local log (if exists)
-        try {
-            const dcLog = path.join(WORKSPACE, 'portal_discord.log');
-            if (fs.existsSync(dcLog)) {
-                const lines = fs.readFileSync(dcLog, 'utf-8').split(/\r?\n/).filter(Boolean);
-                for (const ln of lines) {
-                    try {
-                        const obj = JSON.parse(ln);
-                        // Expect obj = { ts, author_id, channel_type, text }
-                        if (!obj || !obj.ts) continue;
-                        const t = Date.parse(obj.ts) || Number(obj.ts) || 0;
-                        if (t < sinceTs) continue;
-                        // Only DM channel_type and author or recipient is Tyler
-                        if (obj.channel_type === 'dm' && (obj.author_id === ALLOWED_USER_ID || (obj.recipient_id && obj.recipient_id === ALLOWED_USER_ID))) {
-                            items.push({ ts: new Date(t).toISOString(), role: obj.author_id === ALLOWED_USER_ID ? 'me' : 'ai', text: obj.text || '', source: 'discord', meta: { messageId: obj.message_id } });
-                        }
-                    } catch { }
-                }
-            }
-        } catch (e) { /* ignore discord read errors */ }
-
-        // 3) Fallback: check portal_i_chat_history for items from telegram/discord
-        try {
-            const histDir = path.join(WORKSPACE, 'portal_i_chat_history');
-            if (fs.existsSync(histDir)) {
-                const files = fs.readdirSync(histDir).map(f => path.join(histDir, f)).sort();
-                for (const f of files) {
-                    try {
-                        const lines = fs.readFileSync(f, 'utf-8').split(/\r?\n/).filter(Boolean);
-                        for (const ln of lines) {
-                            try {
-                                const obj = JSON.parse(ln);
-                                if (!obj || !obj.ts) continue;
-                                const t = Date.parse(obj.ts) || Number(obj.ts) || 0;
-                                if (t < sinceTs) continue;
-                                if (obj.source === 'telegram' || obj.source === 'discord') {
-                                    items.push({ ts: new Date(t).toISOString(), role: obj.role || 'me', text: obj.text || '', source: obj.source, meta: obj.meta || {} });
-                                }
-                            } catch { }
-                        }
-                    } catch { }
-                }
-            }
-        } catch (e) { /* ignore */ }
-
-        // De-dup by (source + ts + text prefix) and sort asc
-        const seen = new Set();
-        const out = [];
-        items.sort((a,b)=> new Date(a.ts) - new Date(b.ts));
-        for (const it of items) {
-            const key = `${it.source}|${it.ts}|${String(it.text||'').slice(0,120)}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            out.push(it);
-        }
-
-        res.setHeader('Cache-Control', 'no-store');
-        res.json({ ok: true, items: out });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-    }
-});
-// i-chat API (lightweight): send message + short context to main agent
-app.post('/api/i-chat', requireAuth, express.json({ limit: '256kb' }), async (req, res) => {
-    try {
-        const message = String(req.body?.message || '').trim();
-        const context = String(req.body?.context || '').trim();
-        const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
-        if (!message) return res.status(400).json({ ok: false, error: 'Missing message' });
-
-        const { exec } = await import('child_process');
-        const { promisify } = await import('util');
-        const execAsync = promisify(exec);
-
-        const attText = attachments.length
-            ? ('\n\n[Portal i-chat attachments]\n' + attachments.map(a => `- ${a.name} (${a.path})`).join('\n'))
-            : '';
-
-        // Provide short context as a prefix in the message (keeps it simple + portable)
-        const payload = context
-            ? (`[Portal i-chat context]\n\n${context}${attText}\n\n---\n\nUser: ${message}`)
-            : (message + attText);
-
-        const escaped = payload.replace(/'/g, "'\\''");
-        // Allow up to 10 minutes for openclaw agent run when requested from portal i-chat (timeout wrapper)
-        const cmd = `cd ${WORKSPACE} && timeout 600 openclaw agent --agent main -m '${escaped}' --thinking minimal --timeout 590 --no-color`;
-
-        const { stdout } = await execAsync(cmd, { maxBuffer: 1024 * 1024, timeout: 310000 });
-        const lines = String(stdout || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-        const reply = lines.slice(-18).join('\n');
-
-        res.json({ ok: true, reply: reply || '' });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-    }
-});
-
-// i-chat upload: save attachments into obsidian_vault/99_Attachments/portal_i_chat/
-app.post('/api/i-chat/upload', requireAuth, async (req, res) => {
-    try {
-        const { default: multer } = await import('multer');
-        const upload = multer({
-            storage: multer.memoryStorage(),
-            limits: { fileSize: 10 * 1024 * 1024, files: 8 }
-        }).array('files');
-
-        upload(req, res, (err) => {
-            if (err) return res.status(400).json({ ok: false, error: err.message || String(err) });
-            const files = req.files || [];
-            if (!files.length) return res.status(400).json({ ok: false, error: 'No files' });
-
-            const day = new Date().toISOString().slice(0, 10);
-            const baseDirRel = path.join('obsidian_vault', '99_Attachments', 'portal_i_chat', day);
-            const baseDirAbs = path.join(WORKSPACE, baseDirRel);
-            try { fs.mkdirSync(baseDirAbs, { recursive: true }); } catch { }
-
-            const saved = [];
-            for (const f of files) {
-                const safeName = String(f.originalname || 'file').replace(/[^a-zA-Z0-9._\-\u4e00-\u9fff]/g, '_');
-                const stamp = Date.now();
-                const outName = `${stamp}_${safeName}`;
-                const rel = path.join(baseDirRel, outName);
-                const abs = path.join(WORKSPACE, rel);
-                fs.writeFileSync(abs, f.buffer);
-                saved.push({ name: f.originalname, path: rel, size: f.size, mime: f.mimetype });
-            }
-
-            res.json({ ok: true, files: saved });
-        });
-
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-    }
-});
-
-// i-chat streaming API: newline-delimited JSON {type:'delta', text:'...'}
-app.post('/api/i-chat/stream', requireAuth, express.json({ limit: '256kb' }), async (req, res) => {
-    try {
-        const message = String(req.body?.message || '').trim();
-        const context = String(req.body?.context || '').trim();
-        const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
-        if (!message) return res.status(400).json({ ok: false, error: 'Missing message' });
-
-        const attText = attachments.length
-            ? ('\n\n[Portal i-chat attachments]\n' + attachments.map(a => `- ${a.name} (${a.path})`).join('\n'))
-            : '';
-
-        const payload = context
-            ? (`[Portal i-chat context]\n\n${context}${attText}\n\n---\n\nUser: ${message}`)
-            : (message + attText);
-
-        res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
-        res.setHeader('Cache-Control', 'no-store');
-        res.setHeader('X-Accel-Buffering', 'no');
-
-        // Send an immediate chunk so reverse proxies/WebViews won't time out before the agent produces output.
-        res.write(JSON.stringify({ type: 'meta', status: 'started' }) + '\n');
-        const keepAlive = setInterval(() => {
-            try { res.write(JSON.stringify({ type: 'meta', status: 'ping', ts: Date.now() }) + '\n'); } catch { }
-        }, 10000);
-
-        const key = iChatKey(req);
-        ICHAT_STATE.set(key, { text: '', done: false, updatedAt: Date.now() });
-        appendIChatHistory(key, { ts: new Date().toISOString(), role: 'me', source: 'portal-i-chat', text: message });
-
-        const { spawn } = await import('child_process');
-
-        const child = spawn('timeout', [
-            '300',
-            'openclaw', 'agent',
-            '--agent', 'main',
-            '-m', payload,
-            '--thinking', 'minimal',
-            '--timeout', '290',
-            '--no-color'
-        ], {
-            cwd: WORKSPACE,
-            stdio: ['ignore', 'pipe', 'pipe']
-        });
-
-        let sentAny = false;
-        const writeDelta = (txt) => {
-            if (!txt) return;
-            sentAny = true;
-            try {
-                const st = ICHAT_STATE.get(key) || { text: '', done: false, updatedAt: Date.now() };
-                st.text = (st.text || '') + txt;
-                st.done = false;
-                st.updatedAt = Date.now();
-                ICHAT_STATE.set(key, st);
-            } catch { }
-            res.write(JSON.stringify({ type: 'delta', text: txt }) + '\n');
-        };
-
-        child.stdout.on('data', (d) => writeDelta(d.toString('utf-8')));
-        child.stderr.on('data', (d) => writeDelta(d.toString('utf-8')));
-
-        child.on('close', (code, signal) => {
-            try { clearInterval(keepAlive); } catch { }
-            // If the agent produced no stdout/stderr (rare, but happens on timeouts or early exits),
-            // send a useful placeholder so UI won't show (no reply).
-            if (!sentAny) {
-                res.write(JSON.stringify({ type: 'delta', text: `（系統提示：agent 沒有輸出內容；code=${code ?? 'null'}, signal=${signal ?? 'null'}）` }) + '\n');
-            }
-            try {
-                const st = ICHAT_STATE.get(key) || { text: '', done: false, updatedAt: Date.now() };
-                st.done = true;
-                st.updatedAt = Date.now();
-                ICHAT_STATE.set(key, st);
-                appendIChatHistory(key, { ts: new Date().toISOString(), role: 'ai', source: 'main-agent', text: st.text || '' });
-            } catch { }
-            res.write(JSON.stringify({ type: 'done', code, signal }) + '\n');
-            res.end();
-        });
-
-        req.on('close', () => {
-            try { clearInterval(keepAlive); } catch { }
-            try { child.kill('SIGKILL'); } catch { }
-        });
-
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e?.message || String(e) });
-    }
-});
 
 // Favorites details (group by folder, items sorted by created time desc)
 app.get('/api/favorites/details', tgAuth, (req, res) => {
