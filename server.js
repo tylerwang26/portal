@@ -2208,12 +2208,17 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
     try {
         const days = Math.max(1, Math.min(14, parseInt(String(req.query.days || '3'), 10) || 3));
 
-        // Prefer iCloud if configured via env vars or secret files
-        const hasIcloudSecrets = (process.env.ICLOUD_USERNAME && process.env.ICLOUD_APP_PASSWORD)
+        // Determine calendar provider:
+        //   CALENDAR_PROVIDER=icloud → always use iCloud
+        //   CALENDAR_PROVIDER=google → always use Google
+        //   (unset) → use iCloud if credentials available, else Google
+        const provider = (process.env.CALENDAR_PROVIDER || '').toLowerCase();
+        const hasIcloudCreds = (process.env.ICLOUD_USERNAME && process.env.ICLOUD_APP_PASSWORD)
             || (fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'))
                 && fs.existsSync(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt')));
 
-        const payload = hasIcloudSecrets
+        const useIcloud = provider === 'icloud' || (provider !== 'google' && hasIcloudCreds);
+        const payload = useIcloud
             ? await getIcloudUpcoming(days)
             : await getGoogleUpcoming(days);
 

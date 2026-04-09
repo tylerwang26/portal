@@ -653,7 +653,7 @@
                 </a>`;
             }).join('');
         } catch (e) {
-            el.innerHTML = '<div style="padding:13px 16px; color:#f85149; font-size:13px;">行程載入失敗（請先完成 Google OAuth）</div>';
+            el.innerHTML = `<div style="padding:13px 16px; color:#f85149; font-size:13px;">行程載入失敗：${e.message || '未知錯誤'}</div>`;
         }
     }
 
