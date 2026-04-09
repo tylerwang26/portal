@@ -1920,9 +1920,9 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
 
     const getIcloudUpcoming = async (days) => {
         // Prefer env vars (cloud-native), fall back to workspace secret files
-        const user = process.env.ICLOUD_USERNAME
+        const user = (process.env.ICLOUD_USERNAME || '').trim()
             || readSecret(path.join(WORKSPACE, 'secrets', 'icloud_username.txt'));
-        const pw = process.env.ICLOUD_APP_PASSWORD
+        const pw = (process.env.ICLOUD_APP_PASSWORD || '').trim()
             || readSecret(path.join(WORKSPACE, 'secrets', 'icloud_app_password.txt'));
         if (!user || !pw) throw new Error('Missing iCloud credentials (set ICLOUD_USERNAME + ICLOUD_APP_PASSWORD env vars)');
 
