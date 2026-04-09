@@ -1940,7 +1940,10 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
             const headers = {
                 Authorization: auth,
                 Depth: depth,
-                'Content-Type': 'application/xml; charset=utf-8',
+                // iCloud prefers text/xml; application/xml may be rejected
+                'Content-Type': 'text/xml; charset=utf-8',
+                // Some CalDAV servers (including iCloud) require a User-Agent
+                'User-Agent': 'Portal/1.0 (caldav)',
             };
             let currentUrl = url;
             for (let redirects = 0; redirects < 6; redirects++) {
@@ -1957,7 +1960,11 @@ app.get('/api/calendar/upcoming', tgAuth, async (req, res) => {
                     continue;
                 }
                 const text = await r.text();
-                if (!r.ok) throw new Error(`CalDAV ${method} failed (${r.status})`);
+                if (!r.ok) {
+                    const wwwAuth = r.headers.get('www-authenticate') || '';
+                    const snippet = text.slice(0, 200).replace(/\s+/g, ' ');
+                    throw new Error(`CalDAV ${method} ${r.status} @ ${currentUrl} | WWW-Auth: ${wwwAuth} | ${snippet}`);
+                }
                 return text;
             }
             throw new Error('Too many CalDAV redirects');
