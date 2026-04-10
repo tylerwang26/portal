@@ -28,6 +28,7 @@ const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
 const STATIC_TOKEN = process.env.STATIC_PORTAL_TOKEN || 'T628_TYLER_SAFE_ACCESS';
 const VOICE_SERVER_URL = process.env.VOICE_SERVER_URL || 'http://localhost:5050';
 const VOICE_SERVER_TOKEN = process.env.VOICE_SERVER_TOKEN || STATIC_TOKEN;
+const FILEEXPLORER_URL = (process.env.FILEEXPLORER_URL || '').replace(/\/$/, '');
 
 // --- Auth Configuration ---
 const AUTH_DB_PATH = path.join(WORKSPACE, '.portal_auth.json');
@@ -993,8 +994,26 @@ app.post('/api/voice-proxy/tts', tgAuth, express.json({ limit: '2mb' }), async (
 app.post('/api/voice-proxy/voice-chat', tgAuth, (req, res) => proxyVoiceRequest(req, res, '/v1/voice-chat'));
 app.post('/api/voice-proxy/session/clear', tgAuth, (req, res) => proxyVoiceRequest(req, res, '/v1/session/clear'));
 
-// SECURE API: List workspace files
-app.get('/api/workspace/list', tgAuth, (req, res) => {
+// SECURE API: List workspace files (proxy to fileexplorer service if configured)
+app.get('/api/workspace/list', tgAuth, async (req, res) => {
+    if (FILEEXPLORER_URL) {
+        try {
+            const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
+            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/list?${q}`);
+            const data = await r.json();
+            if (!r.ok) return res.status(r.status).json(data);
+            // Normalize fileexplorer response (items) to portal format (list)
+            const list = (data.items || []).map(item => ({
+                name: item.name,
+                isFile: item.type === 'file',
+                isDirectory: item.type === 'dir',
+                path: (req.query.path ? req.query.path + '/' : '') + item.name,
+                size: item.size || 0,
+                mtime: 0, ctime: 0,
+            }));
+            return res.json({ list, currentPath: req.query.path || '' });
+        } catch (e) { return res.status(502).json({ error: 'fileexplorer unavailable: ' + e.message }); }
+    }
     const reqPath = req.query.path || '';
     const targetPath = path.normalize(path.join(WORKSPACE, reqPath));
     if (!targetPath.startsWith(WORKSPACE)) return res.status(403).json({ error: 'Access denied' });
@@ -1011,7 +1030,6 @@ app.get('/api/workspace/list', tgAuth, (req, res) => {
                 isDirectory: st.isDirectory(),
                 path: reqPath ? reqPath + '/' + name : name,
                 size: st.size,
-                // provide numeric ms timestamps for robust sorting in the frontend
                 mtime: Number(st.mtimeMs || st.mtime || Date.parse(st.mtime) || 0),
                 ctime: Number(st.ctimeMs || st.ctime || Date.parse(st.ctime) || 0)
             };
@@ -1020,8 +1038,18 @@ app.get('/api/workspace/list', tgAuth, (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// SECURE API: View file content
-app.get('/api/workspace/view', tgAuth, (req, res) => {
+// SECURE API: View file content (proxy to fileexplorer service if configured)
+app.get('/api/workspace/view', tgAuth, async (req, res) => {
+    if (FILEEXPLORER_URL) {
+        try {
+            const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
+            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/view?${q}`);
+            const data = await r.json();
+            if (!r.ok) return res.status(r.status).json(data);
+            // Normalize: fileexplorer returns { ok, content } → portal expects { content, path }
+            return res.json({ content: data.content, path: req.query.path || '' });
+        } catch (e) { return res.status(502).json({ error: 'fileexplorer unavailable: ' + e.message }); }
+    }
     const reqPath = req.query.path || '';
     const targetPath = path.join(WORKSPACE, reqPath);
     if (!targetPath.startsWith(WORKSPACE)) return res.status(403).json({ error: 'Access denied' });
