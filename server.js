@@ -998,7 +998,7 @@ app.post('/api/voice-proxy/session/clear', tgAuth, (req, res) => proxyVoiceReque
 app.get('/api/workspace/list', tgAuth, async (req, res) => {
     if (FILEEXPLORER_URL) {
         try {
-            const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
+            const q = new URLSearchParams({ path: req.query.path || '' });
             const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/list?${q}`, {
                 headers: { 'x-portal-token': STATIC_TOKEN }
             });
@@ -1044,7 +1044,7 @@ app.get('/api/workspace/list', tgAuth, async (req, res) => {
 app.get('/api/workspace/view', tgAuth, async (req, res) => {
     if (FILEEXPLORER_URL) {
         try {
-            const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
+            const q = new URLSearchParams({ path: req.query.path || '' });
             const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/view?${q}`, {
                 headers: { 'x-portal-token': STATIC_TOKEN }
             });
