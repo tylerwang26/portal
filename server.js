@@ -1009,7 +1009,7 @@ app.get('/api/workspace/list', tgAuth, async (req, res) => {
                 isDirectory: item.type === 'dir',
                 path: (req.query.path ? req.query.path + '/' : '') + item.name,
                 size: item.size || 0,
-                mtime: 0, ctime: 0,
+                mtime: item.mtime || 0, ctime: 0,
             }));
             return res.json({ list, currentPath: req.query.path || '' });
         } catch (e) { return res.status(502).json({ error: 'fileexplorer unavailable: ' + e.message }); }

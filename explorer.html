@@ -332,6 +332,11 @@
             
             try {
                 const data = await apiFetch(`/api/workspace/list?path=${encodeURIComponent(path)}`);
+                if (!data.list) {
+                    const msg = data.error || data.message || JSON.stringify(data);
+                    listEl.innerHTML = `<div style="padding:20px; color:var(--c-danger);">載入失敗：${msg}</div>`;
+                    return;
+                }
                 listEl.innerHTML = '';
 
                 // Sort: Directories first (always), then by selected mode
@@ -613,7 +618,7 @@
                     listEl.appendChild(div);
                 });
             } catch(e) {
-                listEl.innerHTML = '<div style="padding:20px; color:var(--c-danger);">載入失敗</div>';
+                listEl.innerHTML = `<div style="padding:20px; color:var(--c-danger);">載入失敗：${e?.message || String(e)}</div>`;
             }
         }
 
