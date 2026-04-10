@@ -999,7 +999,9 @@ app.get('/api/workspace/list', tgAuth, async (req, res) => {
     if (FILEEXPLORER_URL) {
         try {
             const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
-            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/list?${q}`);
+            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/list?${q}`, {
+                headers: { 'x-portal-token': STATIC_TOKEN }
+            });
             const data = await r.json();
             if (!r.ok) return res.status(r.status).json(data);
             // Normalize fileexplorer response (items) to portal format (list)
@@ -1043,7 +1045,9 @@ app.get('/api/workspace/view', tgAuth, async (req, res) => {
     if (FILEEXPLORER_URL) {
         try {
             const q = new URLSearchParams({ path: req.query.path || '', token: STATIC_TOKEN });
-            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/view?${q}`);
+            const r = await fetch(`${FILEEXPLORER_URL}/api/workspace/view?${q}`, {
+                headers: { 'x-portal-token': STATIC_TOKEN }
+            });
             const data = await r.json();
             if (!r.ok) return res.status(r.status).json(data);
             // Normalize: fileexplorer returns { ok, content } → portal expects { content, path }
