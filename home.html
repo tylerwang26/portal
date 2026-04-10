@@ -280,7 +280,7 @@
     <div class="icon-bar" aria-label="Quick links">
         <a class="icon-btn" href="/stocks" title="即時股票" aria-label="即時股票" target="_blank" rel="noopener">📈</a>
         <a class="icon-btn" href="/skills.html" title="Skills" target="_blank" rel="noopener">🧠</a>
-        <a class="icon-btn" href="/explorer?path=obsidian_vault" title="檔案總管" target="_blank" rel="noopener">📂</a>
+        <a class="icon-btn" id="explorer-link" href="/explorer?path=obsidian_vault" title="檔案總管" target="_blank" rel="noopener">📂</a>
         <button class="icon-btn" onclick="openUploadModal()" title="上傳檔案" aria-label="上傳檔案">📤</button>
         <button class="icon-btn" onclick="clipLink()" title="收藏連結" aria-label="收藏連結">🔗</button>
     </div>
@@ -1169,7 +1169,14 @@
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
         console.log('DOM loaded, initializing...');
-        
+
+        // Patch explorer link to forward token if present in URL
+        (function patchExplorerLink() {
+            const token = new URLSearchParams(window.location.search).get('token') || '';
+            const el = document.getElementById('explorer-link');
+            if (el && token) el.href = `/explorer?path=obsidian_vault&token=${encodeURIComponent(token)}`;
+        })();
+
         // Load homepage data
         loadFavoritesHome();
         loadAgendaHome();
